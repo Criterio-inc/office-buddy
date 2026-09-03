@@ -1,0 +1,24 @@
+# Hemligheter genereras vid bygget ur nyckelringen och får aldrig hamna i git.
+firmware/main/secrets.h
+
+# Byggresultat
+firmware/build/
+firmware/managed_components/
+firmware/sdkconfig
+firmware/sdkconfig.old
+firmware/dependencies.lock
+sim/build/
+sim/bilder/
+
+# Egen dokumentation, enligt husregeln
+docs/
+
+# Byggloggar och Pythons cache
+firmware/*.log
+__pycache__/
+
+# Kompilerad kalenderhjälp
+server/kalender
+
+# Egna inställningar, aldrig i git
+server/buddy.json

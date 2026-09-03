@@ -1,0 +1,27 @@
+{
+  "_kommentar": "Kopiera till buddy.json och fyll i det du vill ha. Allt är valfritt; tomt betyder av.",
+
+  "port": "",
+  "brevlada_port": 8739,
+
+  "puls_url": "",
+  "puls_kommentar": "Valfri tjänst som svarar med JSON {antal, poster:[{projekt, dagar, bradska}]} om sådant som väntar. Utan den får buddyn inget att oroa sig för.",
+
+  "backup_status": "",
+  "offsite_status": "",
+  "backup_kommentar": "Valfria JSON-filer med fältet senasteLyckade (ISO-tid) och ev. senasteFel. Kontrolleras en gång om dagen efter backup_koll_efter.",
+  "backup_koll_efter": 11.5,
+
+  "mejl": true,
+  "kontofarger": {
+    "iCloud": "#b79cff",
+    "Jobbet": "#7fe29b",
+    "Kunden": "#ff6f91"
+  },
+
+  "kalender": true,
+  "kalender_ignorera": ["shl", "hockey", "holiday", "helgdag", "siri", "birthday", "födelsedag"],
+  "mote_varna_min": 10,
+
+  "paminnelser": true
+}

@@ -1,0 +1,33 @@
+# 16 MB flash och 8 MB PSRAM, avläst ur chippet med esptool.
+CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+CONFIG_ESPTOOLPY_FLASHMODE_QIO=y
+CONFIG_SPIRAM=y
+CONFIG_SPIRAM_MODE_OCT=y
+# 40 MHz, inte 80, och PSRAM bara via heap_caps_malloc. Båda hittades
+# baklänges i Projektpulsen: utan dem hänger kortet. Se projektpulsen/README.md.
+CONFIG_SPIRAM_SPEED_40M=y
+CONFIG_SPIRAM_USE_CAPS_ALLOC=y
+CONFIG_FREERTOS_HZ=1000
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
+
+# Egen partitionstabell med 4 MB åt appen.
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+
+# Ritbufferten: 60 rader i taget i stället för 20. Ansiktet rör sig hela
+# tiden, och färre men större skrivningar till panelen ger jämnare rörelse.
+CONFIG_BSP_LCD_RGB_BOUNCE_BUFFER_HEIGHT=60
+
+# Ärvt från Projektpulsen för den dag wifi läggs till igen; ofarligt utan.
+CONFIG_ESP_WIFI_STA_DISCONNECTED_PM_ENABLE=n
+
+# LVGL:s logg står på. En misslyckad assert i LVGL är annars en tyst
+# while(1) på full CPU utan ett ord i loggen, en fälla från Projektpulsen.
+CONFIG_LV_USE_LOG=y
+CONFIG_LV_LOG_LEVEL_WARN=y
+CONFIG_LV_LOG_PRINTF=y
+# Vakta även tomgången på kärna 1, där LVGL-uppgiften kan hamna.
+CONFIG_ESP_TASK_WDT_CHECK_IDLE_TASK_CPU1=y
+
+# Konsolen går över USB-Serial/JTAG, samma ström som datorn skickar rader på.
+CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y

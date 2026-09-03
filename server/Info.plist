@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleIdentifier</key><string>se.critero.office-buddy.kalender</string>
+  <key>CFBundleName</key><string>Office Buddy kalender</string>
+  <key>NSCalendarsFullAccessUsageDescription</key><string>Office Buddy läser kommande möten för att kunna säga till tio minuter innan.</string>
+  <key>NSRemindersFullAccessUsageDescription</key><string>Office Buddy läser påminnelser för att kunna säga till när de förfaller.</string>
+  <key>NSRemindersUsageDescription</key><string>Office Buddy läser påminnelser för att kunna säga till när de förfaller.</string>
+  <key>NSCalendarsUsageDescription</key><string>Office Buddy läser kommande möten för att kunna säga till tio minuter innan.</string>
+</dict>
+</plist>
