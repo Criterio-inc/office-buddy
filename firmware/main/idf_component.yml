@@ -4,3 +4,5 @@ dependencies:
   # Waveshares egen modul för exakt det här kortet. 2.0.3 är samma version
   # som fabriksfirmwaren använder, avläst ur kortets egen bootlogg.
   waveshare/esp32_s3_touch_amoled_1_8: "==2.0.3"
+  # Namnet office-buddy.local på hemnätet.
+  espressif/mdns: "^1.4"

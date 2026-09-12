@@ -161,6 +161,22 @@ Timern går vidare i bakgrunden om du sveper hem. Ett svep till är hemma.
 
 Från datorn: `vy klocka`, `vy timer`, `timer 25`.
 
+## Wifi
+
+Sitter kortet i datorn går länken över USB. Annars går den över wifi: kortet
+annonserar sig som `office-buddy.local` på hemnätet, och länktjänsten hittar
+det där så länge datorn är på samma nät. Dra ur datorn och gå, så fortsätter
+buddyn på den ström sladden ger. Wifi-lösenordet ligger i nyckelringen och
+`verktyg/generera-secrets.sh` skriver `firmware/main/secrets.h` inför bygget;
+utan den filen byggs firmwaren utan wifi.
+
+```bash
+security add-generic-password -a "$USER" -s office-buddy-wifi -w
+OFFICE_BUDDY_SSID="ditt 2,4 GHz-nät" verktyg/generera-secrets.sh
+```
+
+Kortet ser bara 2,4 GHz-nät.
+
 ## Datorn sover, buddyn sover
 
 Datorn skriver till kortet var trettionde sekund. Har den varit tyst i två

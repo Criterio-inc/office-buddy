@@ -64,8 +64,12 @@ Waveshare ESP32-S3-Touch-AMOLED-1.8. Everything on the board gets a job:
 | ES8311 codec | three small square-wave tones and a jingle |
 | TCA9554 expander | panel power and reset (see the lesson below) |
 
-No battery, no Wi-Fi: the board lives on USB-C, which carries both power and
-the data link.
+No battery. The board lives on USB-C for power. The data link is USB when the
+board sits in your Mac, and **Wi-Fi** otherwise: the board announces itself as
+`office-buddy.local` and the link on your Mac finds it there as long as both
+are on the same network. Unplug the laptop and walk off, and the buddy keeps
+going on whatever powers its cable; when the Mac has been silent for two
+minutes it goes to sleep, and wakes with a jingle when you are back.
 
 ## Quick start
 
@@ -84,6 +88,15 @@ between views, `+`/`-` turn the clock. The emulator reads the same protocol
 lines on stdin as the board does on USB.
 
 **2. Flash the board**
+
+Optional but recommended: put your Wi-Fi password in the macOS keychain and
+generate `firmware/main/secrets.h` (gitignored). Without it the firmware
+builds without Wi-Fi and the buddy works on USB only.
+
+```bash
+security add-generic-password -a "$USER" -s office-buddy-wifi -w
+OFFICE_BUDDY_SSID="your 2.4 GHz network" verktyg/generera-secrets.sh
+```
 
 ```bash
 source ~/esp/esp-idf/export.sh && cd firmware && idf.py set-target esp32s3 && idf.py build

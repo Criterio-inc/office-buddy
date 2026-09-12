@@ -7,6 +7,7 @@ idf_component_register(
          "klocka.c"
          "hardvarukoll.c"
          "usb_lank.c"
+         "natverk.c"
          "panelstrom.c"
          "rorelse.c"
          "ljud.c"
@@ -19,4 +20,4 @@ idf_component_register(
          "${DELAT}/lv_font_datum.c"
          "${DELAT}/vyer.c"
     INCLUDE_DIRS "." "${DELAT}"
-    REQUIRES esp_psram esp_driver_i2c spi_flash esp_hw_support esp_driver_usb_serial_jtag vfs nvs_flash esp_driver_gpio)
+    REQUIRES esp_psram esp_driver_i2c spi_flash esp_hw_support esp_driver_usb_serial_jtag vfs nvs_flash esp_driver_gpio esp_wifi esp_netif esp_event lwip)

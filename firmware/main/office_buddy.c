@@ -26,6 +26,7 @@
 #include "klocka.h"
 #include "knappar.h"
 #include "ljud.h"
+#include "natverk.h"
 #include "panelstrom.h"
 #include "protokoll.h"
 #include "rorelse.h"
@@ -187,9 +188,10 @@ static void skotsel_uppgift(void *arg)
             float t = lokal_timme();
             char strom[160];
             hardvarukoll_stromlage(strom, sizeof(strom));
-            ESP_LOGI(TAG, "%02d:%02d  energi %.2f  glädje %.2f  oro %.2f  %s, %s  petningar %d  [%s]",
+            ESP_LOGI(TAG, "%02d:%02d  energi %.2f  glädje %.2f  oro %.2f  %s, %s  petningar %d  wifi %s  [%s]",
                      (int)t, (int)((t - (int)t) * 60), h->energi, h->gladje, h->oro,
-                     humor_ord(), uttryck_namn(ansikte_uttryck()), petningar, strom);
+                     humor_ord(), uttryck_namn(ansikte_uttryck()), petningar,
+                     natverk_uppkopplat() ? natverk_ip() : "nej", strom);
         }
     }
 }
@@ -269,6 +271,7 @@ void app_main(void)
     protokoll_krokar_t krokar = { .tid = ny_tid, .ljus = nytt_ljus, .ljud = nytt_ljud };
     protokoll_satt_krokar(&krokar);
     usb_lank_starta();
+    natverk_starta();
     rorelse_starta();
     knappar_starta();   /* läser sparad volym innan högtalaren startar */
     ljud_starta();

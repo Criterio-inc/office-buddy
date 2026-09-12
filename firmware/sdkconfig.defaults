@@ -18,7 +18,8 @@ CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
 # tiden, och färre men större skrivningar till panelen ger jämnare rörelse.
 CONFIG_BSP_LCD_RGB_BOUNCE_BUFFER_HEIGHT=60
 
-# Ärvt från Projektpulsen för den dag wifi läggs till igen; ofarligt utan.
+# Strömsparning för frånkopplad station var kodvägen som kraschade
+# Projektpulsen. Kortet sitter i en sladd och har inget att spara.
 CONFIG_ESP_WIFI_STA_DISCONNECTED_PM_ENABLE=n
 
 # LVGL:s logg står på. En misslyckad assert i LVGL är annars en tyst

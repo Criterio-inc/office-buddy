@@ -29,6 +29,8 @@ HAR = os.path.dirname(os.path.abspath(__file__))
 
 STANDARD = {
     "port": "",
+    "wifi_host": "office-buddy.local",
+    "wifi_port": 8740,
     "brevlada_port": 8739,
     "puls_url": "",
     "backup_status": "",
@@ -101,30 +103,56 @@ def oppna(port):
 
 
 class Lank:
+    """USB om kortet sitter i datorn, annars wifi. Båda ger ett fd som
+    os.read/os.write och select hanterar likadant."""
     def __init__(self, port):
         self.port = port
         self.fd = None
+        self.sock = None
         self.rest = b""
+        self.vag = ""
 
     def anslut(self):
         port = self.port or hitta_port()
-        if port is None:
+        if port is not None:
+            try:
+                self.fd = oppna(port)
+                self.vag = "usb"
+                logg(f"ansluten till {port}")
+                return True
+            except OSError as fel:
+                logg(f"kunde inte öppna {port}: {fel}")
+        vard, wport = INST["wifi_host"], int(INST["wifi_port"])
+        if not vard:
             return False
         try:
-            self.fd = oppna(port)
+            self.sock = socket.create_connection((vard, wport), timeout=4)
+            self.sock.settimeout(None)
+            self.fd = self.sock.fileno()
+            self.vag = "wifi"
+            logg(f"ansluten över wifi till {vard}:{wport}")
+            return True
         except OSError as fel:
-            logg(f"kunde inte öppna {port}: {fel}")
+            if not getattr(self, "klagat_wifi", False):
+                logg(f"hittar varken USB eller {vard}: {fel}")
+                self.klagat_wifi = True
+            self.sock = None
             return False
-        logg(f"ansluten till {port}")
-        return True
 
     def stang(self):
-        if self.fd is not None:
+        if self.sock is not None:
+            try:
+                self.sock.close()
+            except OSError:
+                pass
+        elif self.fd is not None:
             try:
                 os.close(self.fd)
             except OSError:
                 pass
+        self.sock = None
         self.fd = None
+        self.vag = ""
 
     def skicka(self, rad):
         if self.fd is None:
@@ -155,6 +183,10 @@ class Lank:
                 self.stang()
                 break
             if not d:
+                if self.sock is not None:
+                    logg("kortet la på")
+                    self.stang()
+                    break
                 continue
             self.rest += d
             while b"\n" in self.rest:

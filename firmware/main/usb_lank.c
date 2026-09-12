@@ -43,6 +43,11 @@ static void lasare(void *arg)
     }
 }
 
+void usb_lank_markera_rad(void)
+{
+    senaste_rad_ms = (uint32_t)(xTaskGetTickCount() * portTICK_PERIOD_MS);
+}
+
 int32_t usb_lank_tyst_ms(void)
 {
     return (int32_t)((uint32_t)(xTaskGetTickCount() * portTICK_PERIOD_MS) - senaste_rad_ms);

@@ -43,6 +43,10 @@ The primary README is English. Keep it that way; do not translate the code.
 - LVGL fonts are generated with `--no-compress` and must contain every
   character printed (Swedish letters, ellipsis).
 - No large structs on task stacks. No blocking in ESP-IDF event handlers.
+- Wi-Fi credentials come from `firmware/main/secrets.h`, generated from the
+  keychain by `verktyg/generera-secrets.sh` and gitignored. `natverk.c`
+  compiles to a stub without it. The Mac link prefers USB and falls back to
+  `office-buddy.local:8740`; both carry the same protocol lines.
 - The link service holds the USB port: `launchctl unload` it before
   `idf.py flash`, `load` it after.
 - Personal settings live in `server/buddy.json`, which is gitignored. The
