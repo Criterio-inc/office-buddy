@@ -333,9 +333,9 @@ ett svar, `claude klar` när den är färdig, `claude jobbar` när du svarat.
 Varje session skickar med sitt id och projektmappens namn, så buddyn
 skiljer sessionerna åt: en ny session som väntar annonseras alltid, även
 om en annan redan väntar, och raden säger vilket projekt det gäller,
-"Claude väntar: office-buddy och 1 till". Buddyn skiftar till orange,
-tittar upp mot datorn och håller raden kvar tills du är tillbaka, med en
-liten blick åt datorns håll varannan minut. När du svarar i en session
+"Claude väntar: office-buddy och 1 till". Buddyn skiftar till orange i
+tre sekunder, tittar upp mot datorn och håller raden kvar tills du är
+tillbaka, med en liten blick åt datorns håll varannan minut. När du svarar i en session
 försvinner just den; det som återstår avgör vad glaset visar. Ett knack
 kvitterar allt. Sessioner som inte kör Claude Codes krokar, som Cowork
 och webben, syns inte. Krokarna läggs in med `python3 server/claude-krokar.py` och anropar

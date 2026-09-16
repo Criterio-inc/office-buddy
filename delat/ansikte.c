@@ -52,6 +52,7 @@ static float      varm_mal;
 static lv_color_t ton_farg;
 static int32_t    ton_kvar_ms;
 static lv_color_t ton_aktiv;     /* färgen allt tonas mot just nu */
+static int32_t    varm_auto_ms;  /* orange släpper av sig själv efter en stund */
 static float      ton_andel;     /* 0..1, hur långt tonen nått */
 
 static float begransa(float v, float lo, float hi);
@@ -852,6 +853,8 @@ static void tick(lv_timer_t *t)
 
     /* Färgen glider mot sitt mål: cyan, orange, eller en tillfällig ton. */
     if (ton_kvar_ms > 0) ton_kvar_ms -= dt;
+    /* Orange är en signal, inte ett tillstånd: den syns i tre sekunder och släpper sedan. */
+    if (varm_auto_ms > 0) { varm_auto_ms -= dt; if (varm_auto_ms <= 0) varm_mal = 0; }
     {
         float mal_andel = (ton_kvar_ms > 0 || varm_mal > 0.5f) ? 1.0f : 0.0f;
         if (mal_andel > 0.5f) ton_aktiv = ton_kvar_ms > 0 ? ton_farg : FARG_ORANGE;
@@ -1039,6 +1042,7 @@ void ansikte_synlig(bool synlig)
 void ansikte_varm(bool varm)
 {
     varm_mal = varm ? 1.0f : 0.0f;
+    varm_auto_ms = varm ? 3000 : 0;
 }
 
 bool ansikte_ar_varm(void)

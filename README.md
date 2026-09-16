@@ -53,8 +53,8 @@ are in Swedish; the protocol keywords are too. That is part of its charm.*
 | Asleep | eyes become soft waves; a few times a night it dreams in colourful TV static |
 | Nothing for 20 min | sometimes a fly buzzes across the glass and the gaze follows it out |
 
-Orange means exactly one thing: *something needs you now*. Nothing else may
-use it.
+Orange means exactly one thing: *something needs you now*. It shows for
+three seconds and lets go; the line stays. Nothing else may use it.
 
 ![Orange when something needs you](bilder/orange.png)
 
