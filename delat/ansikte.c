@@ -792,7 +792,7 @@ static void tick(lv_timer_t *t)
                 /* Repliken följer med i en mattare variant av samma ton. */
                 lv_obj_set_style_text_color(replik, lv_color_mix(farg(FARG_OGA), lv_color_hex(0x8A9AA0), 140), LV_PART_MAIN);
             }
-            lv_obj_invalidate(yta);
+            /* Ögon och mun ritas om ändå av steg 4 nedan; ingen helskärm behövs. */
         }
     }
 

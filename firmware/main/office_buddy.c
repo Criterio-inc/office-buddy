@@ -204,16 +204,21 @@ void app_main(void)
     panelstrom_starta();
 
     /*
-     * Samma inställningar som bsp_display_start(), men med större stack åt
-     * LVGL-uppgiften. Standardens 4 kB räcker för textetiketter men inte för
-     * bågar och trianglar med kantutjämning, och ett stacköverflöde i den
-     * uppgiften kan frysa kortet tyst.
+     * Två avsteg från bsp_display_start(). Större stack åt LVGL-uppgiften:
+     * standardens 4 kB räcker för textetiketter men inte för bågar och
+     * trianglar med kantutjämning. Och ritbufferten i INTERNT DMA-minne, inte
+     * i PSRAM: ligger den i PSRAM måste SPI-drivrutinen kopiera varje
+     * överföring till en tillfällig internbuffert på 15 kB, och när minnet
+     * fragmenterats av ljudkretsens och wifi:s buffertar misslyckas den
+     * ("Failed to allocate priv TX buffer"). Då tappas rader på glaset,
+     * LVGL väntar för evigt på överföringen och vakthunden startar om kortet.
+     * Bufferten tas här, först av alla, så att den alltid finns.
      */
     bsp_display_cfg_t cfg = {
         .lvgl_port_cfg = ESP_LVGL_PORT_INIT_CONFIG(),
-        .buffer_size   = BSP_LCD_DRAW_BUFF_SIZE,
-        .double_buffer = BSP_LCD_DRAW_BUFF_DOUBLE,
-        .flags = { .buff_dma = false, .buff_spiram = true },
+        .buffer_size   = BSP_LCD_H_RES * 24,
+        .double_buffer = false,
+        .flags = { .buff_dma = true, .buff_spiram = false },
     };
     cfg.lvgl_port_cfg.task_stack = 16384;
     lv_display_t *skarm = bsp_display_start_with_config(&cfg);
