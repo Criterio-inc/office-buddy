@@ -26,37 +26,46 @@
 /* ---- Färger ------------------------------------------------------------ */
 
 #define FARG_BAKGRUND lv_color_hex(0x000000)
-#define FARG_CYAN     lv_color_hex(ANSIKTE_FARG_GRUND)   /* grundfärgen i vila */
+/*
+ * Paletten. Ögonvitan är benvit, irisen bär den gröna, munnen är rosa,
+ * brynen ljusgröna. Orange är fortfarande reserverad för "behöver dig":
+ * då tonas alla ljusa delar mot den, liksom mot ett mejlkontos färg.
+ */
+#define FARG_OGA      lv_color_hex(0xF5F1E6)   /* ögonvitan, benvit */
+#define FARG_IRIS     lv_color_hex(ANSIKTE_FARG_GRUND)
+#define FARG_PUPILL   lv_color_hex(0x141C17)   /* nästan svart, med en aning grönt */
+#define FARG_GLIMT    lv_color_hex(0xFFFFFF)   /* ljusglimten i pupillen */
+#define FARG_MUN      lv_color_hex(0xF29AA6)   /* rosa */
+#define FARG_BRYN     lv_color_hex(0xC9D6BC)   /* ljusgrön */
+#define FARG_HJARTA   lv_color_hex(0xFF6B8B)
+#define FARG_SPIRAL   lv_color_hex(0xB79CFF)
 #define FARG_ORANGE   lv_color_hex(0xFFA042)   /* varm, när något behöver dig */
-#define FARG_PUPILL   lv_color_hex(0x0A1410)   /* nästan svart, med en aning grönt */
-#define FARG_GLIMT    lv_color_hex(0xF2FAF0)   /* ljusglimten i pupillen */
 #define FARG_RODNAD   lv_color_hex(0xF08A8A)
-#define FARG_REPLIK_K lv_color_hex(0x9AB8BF)   /* dämpat, orden ska inte tävla med ögonen */
+#define FARG_REPLIK_K lv_color_hex(0xB8C2B0)   /* dämpat, orden ska inte tävla med ögonen */
 
 /*
  * Färgen just nu. Målet är cyan, orange när något behöver dig, eller en
  * tillfällig ton; färgen glider dit och ritas därefter. varm_nu används
  * bara för replikens matta variant.
  */
-static lv_color_t farg_ljus = { 0 };
-static lv_color_t farg_mal;
 static float      varm_mal;
 static lv_color_t ton_farg;
 static int32_t    ton_kvar_ms;
-#define FARG_LJUS     farg_ljus
+static lv_color_t ton_aktiv;     /* färgen allt tonas mot just nu */
+static float      ton_andel;     /* 0..1, hur långt tonen nått */
 
 static float begransa(float v, float lo, float hi);
-
-static lv_color_t farg_att_sikta_pa(void)
-{
-    if (ton_kvar_ms > 0) return ton_farg;
-    return varm_mal > 0.5f ? FARG_ORANGE : FARG_CYAN;
-}
 
 /* Blandar två färger med en andel 0..1. */
 static lv_color_t blanda(lv_color_t fran, lv_color_t till, float andel)
 {
     return lv_color_mix(till, fran, (lv_opa_t)(begransa(andel, 0, 1) * 255));
+}
+
+/* En av ansiktets ljusa färger, tonad mot orange eller ett kontos färg. */
+static lv_color_t farg(lv_color_t bas)
+{
+    return ton_andel < 0.01f ? bas : blanda(bas, ton_aktiv, ton_andel);
 }
 
 LV_FONT_DECLARE(lv_font_replik);
@@ -343,21 +352,21 @@ static void rita_hjarta(lv_layer_t *l, float cx, float cy, float w, float h)
     float r = w * 0.27f;
     lv_area_t a;
     area_satt(&a, cx - w * 0.5f, cy - h * 0.38f, cx - w * 0.5f + 2 * r, cy - h * 0.38f + 2 * r);
-    rita_rekt(l, &a, FARG_LJUS, LV_OPA_COVER, LV_RADIUS_CIRCLE);
+    rita_rekt(l, &a, farg(FARG_HJARTA), LV_OPA_COVER, LV_RADIUS_CIRCLE);
     area_satt(&a, cx + w * 0.5f - 2 * r, cy - h * 0.38f, cx + w * 0.5f, cy - h * 0.38f + 2 * r);
-    rita_rekt(l, &a, FARG_LJUS, LV_OPA_COVER, LV_RADIUS_CIRCLE);
+    rita_rekt(l, &a, farg(FARG_HJARTA), LV_OPA_COVER, LV_RADIUS_CIRCLE);
     rita_triangel(l, cx - w * 0.5f, cy - h * 0.38f + r * 1.02f,
                      cx + w * 0.5f, cy - h * 0.38f + r * 1.02f,
-                     cx,            cy + h * 0.5f, FARG_LJUS);
+                     cx,            cy + h * 0.5f, farg(FARG_HJARTA));
 }
 
 static void rita_spiral(lv_layer_t *l, float cx, float cy, float w, float snurr)
 {
     float r = w * 0.5f;
     int32_t b = (int32_t)(6 * SKALA);
-    rita_bage(l, cx, cy, r,             snurr,        snurr + 290, b, FARG_LJUS);
-    rita_bage(l, cx, cy, r * 0.66f,     snurr + 120,  snurr + 400, b, FARG_LJUS);
-    rita_bage(l, cx, cy, r * 0.33f,     snurr + 240,  snurr + 480, b, FARG_LJUS);
+    rita_bage(l, cx, cy, r,             snurr,        snurr + 290, b, farg(FARG_SPIRAL));
+    rita_bage(l, cx, cy, r * 0.66f,     snurr + 120,  snurr + 400, b, farg(FARG_SPIRAL));
+    rita_bage(l, cx, cy, r * 0.33f,     snurr + 240,  snurr + 480, b, farg(FARG_SPIRAL));
 }
 
 /*
@@ -378,7 +387,7 @@ static void rita_oga(lv_layer_t *l, const oga_t *o, float cx, float cy, bool hog
     area_satt(&a, cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2);
     int32_t r = (int32_t)(o->r * fminf(w, h) / 2);
 
-    rita_rekt(l, &a, FARG_LJUS, LV_OPA_COVER, r);
+    rita_rekt(l, &a, farg(FARG_OGA), LV_OPA_COVER, r);
 
     /*
      * Pupillen: en mörk cirkel som följer blicken med större utslag än
@@ -395,6 +404,11 @@ static void rita_oga(lv_layer_t *l, const oga_t *o, float cx, float cy, bool hog
         float py = cy + (pup_y) * (h_full * 0.5f - rp) * 0.8f;
         if (py - pr < cy - h / 2) py = cy - h / 2 + pr;
         if (py + pr > cy + h / 2) py = cy + h / 2 - pr;
+        /* Irisen: en grön ring runt pupillen, sedan pupillen själv. */
+        float ir = pr * 1.55f;
+        lv_area_t ia;
+        area_satt(&ia, px - ir, py - ir, px + ir, py + ir);
+        rita_rekt(l, &ia, farg(FARG_IRIS), LV_OPA_COVER, LV_RADIUS_CIRCLE);
         lv_area_t pa;
         area_satt(&pa, px - pr, py - pr, px + pr, py + pr);
         rita_rekt(l, &pa, FARG_PUPILL, LV_OPA_COVER, LV_RADIUS_CIRCLE);
@@ -462,7 +476,7 @@ static void rita_oga(lv_layer_t *l, const oga_t *o, float cx, float cy, bool hog
             { (lv_value_precise_t)lroundf(xl), (lv_value_precise_t)lroundf(hoger ? y_in : y_ut) },
             { (lv_value_precise_t)lroundf(xr), (lv_value_precise_t)lroundf(hoger ? y_ut : y_in) },
         };
-        rita_linje_opa(l, p, 2, (int32_t)(8 * SKALA), FARG_LJUS, (lv_opa_t)(o->bryn * 255));
+        rita_linje_opa(l, p, 2, (int32_t)(8 * SKALA), farg(FARG_BRYN), (lv_opa_t)(o->bryn * 255));
     }
 }
 
@@ -476,13 +490,13 @@ static void rita_mun(lv_layer_t *l, const mun_t *m, float cx, float cy)
         if (m->platt > 0.5f) {
             /* Ett skratt: en rundad form vars övre halva täcks, kvar blir ett D. */
             area_satt(&a, cx - w / 2, cy - h * 1.5f, cx + w / 2, cy + h / 2);
-            rita_rekt(l, &a, FARG_LJUS, LV_OPA_COVER, LV_RADIUS_CIRCLE);
+            rita_rekt(l, &a, farg(FARG_MUN), LV_OPA_COVER, LV_RADIUS_CIRCLE);
             lv_area_t b;
             area_satt(&b, cx - w / 2 - 3, cy - h * 1.5f - 3, cx + w / 2 + 3, cy - h / 2);
             rita_rekt(l, &b, FARG_BAKGRUND, LV_OPA_COVER, 0);
         } else {
             area_satt(&a, cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2);
-            rita_rekt(l, &a, FARG_LJUS, LV_OPA_COVER, LV_RADIUS_CIRCLE);
+            rita_rekt(l, &a, farg(FARG_MUN), LV_OPA_COVER, LV_RADIUS_CIRCLE);
         }
         return;
     }
@@ -494,7 +508,7 @@ static void rita_mun(lv_layer_t *l, const mun_t *m, float cx, float cy)
             p[i].x = (lv_value_precise_t)lroundf(cx - w / 2 + w * i / 6.0f);
             p[i].y = (lv_value_precise_t)lroundf(cy + ((i & 1) ? amp : -amp) - m->kurva * 4);
         }
-        rita_linje(l, p, 7, tjock - 1, FARG_LJUS);
+        rita_linje(l, p, 7, tjock - 1, farg(FARG_MUN));
         return;
     }
 
@@ -503,7 +517,7 @@ static void rita_mun(lv_layer_t *l, const mun_t *m, float cx, float cy)
             { (lv_value_precise_t)lroundf(cx - w / 2), (lv_value_precise_t)lroundf(cy) },
             { (lv_value_precise_t)lroundf(cx + w / 2), (lv_value_precise_t)lroundf(cy) },
         };
-        rita_linje(l, p, 2, tjock, FARG_LJUS);
+        rita_linje(l, p, 2, tjock, farg(FARG_MUN));
         return;
     }
 
@@ -512,9 +526,9 @@ static void rita_mun(lv_layer_t *l, const mun_t *m, float cx, float cy)
     float R = (s * s + (w / 2) * (w / 2)) / (2 * s);
     float grader = asinf(begransa((w / 2) / R, 0, 1)) * 180.0f / (float)M_PI;
     if (m->kurva > 0) {
-        rita_bage(l, cx, cy + s / 2 - R, R + tjock / 2.0f, 90 - grader, 90 + grader, tjock, FARG_LJUS);
+        rita_bage(l, cx, cy + s / 2 - R, R + tjock / 2.0f, 90 - grader, 90 + grader, tjock, farg(FARG_MUN));
     } else {
-        rita_bage(l, cx, cy - s / 2 + R, R + tjock / 2.0f, 270 - grader, 270 + grader, tjock, FARG_LJUS);
+        rita_bage(l, cx, cy - s / 2 + R, R + tjock / 2.0f, 270 - grader, 270 + grader, tjock, farg(FARG_MUN));
     }
 }
 
@@ -584,9 +598,9 @@ static void rita(lv_event_t *e)
         float rw = v.w * 0.55f, rh = v.h * 0.22f;
         lv_area_t ra;
         area_satt(&ra, ovx - rw / 2 - v.w * 0.12f, ovy + v.h * 0.5f + 6, ovx + rw / 2 - v.w * 0.12f, ovy + v.h * 0.5f + 6 + rh);
-        rita_rekt(l, &ra, FARG_RODNAD, (lv_opa_t)(nu.rodnad * 150), LV_RADIUS_CIRCLE);
+        rita_rekt(l, &ra, FARG_RODNAD, (lv_opa_t)(nu.rodnad * 200), LV_RADIUS_CIRCLE);
         area_satt(&ra, ohx - rw / 2 + h.w * 0.12f, ohy + h.h * 0.5f + 6, ohx + rw / 2 + h.w * 0.12f, ohy + h.h * 0.5f + 6 + rh);
-        rita_rekt(l, &ra, FARG_RODNAD, (lv_opa_t)(nu.rodnad * 150), LV_RADIUS_CIRCLE);
+        rita_rekt(l, &ra, FARG_RODNAD, (lv_opa_t)(nu.rodnad * 200), LV_RADIUS_CIRCLE);
     }
     rita_mun(l, &mun, mx, my);
 }
@@ -684,17 +698,18 @@ static void tick(lv_timer_t *t)
 
     /* Färgen glider mot sitt mål: cyan, orange, eller en tillfällig ton. */
     if (ton_kvar_ms > 0) ton_kvar_ms -= dt;
-    farg_mal = farg_att_sikta_pa();
-    if (farg_ljus.red != farg_mal.red || farg_ljus.green != farg_mal.green || farg_ljus.blue != farg_mal.blue) {
-        farg_ljus = blanda(farg_ljus, farg_mal, 0.08f * steg);
-        /* Sista biten tas i ett steg, annars fastnar avrundningen strax intill. */
-        if (abs((int)farg_ljus.red - farg_mal.red) < 3 && abs((int)farg_ljus.green - farg_mal.green) < 3 &&
-            abs((int)farg_ljus.blue - farg_mal.blue) < 3) farg_ljus = farg_mal;
-        if (replik != NULL) {
-            /* Repliken följer med i en mattare variant av samma färg. */
-            lv_obj_set_style_text_color(replik, lv_color_mix(farg_ljus, lv_color_hex(0x8A9AA0), 140), LV_PART_MAIN);
+    {
+        float mal_andel = (ton_kvar_ms > 0 || varm_mal > 0.5f) ? 1.0f : 0.0f;
+        if (mal_andel > 0.5f) ton_aktiv = ton_kvar_ms > 0 ? ton_farg : FARG_ORANGE;
+        if (fabsf(mal_andel - ton_andel) > 0.003f) {
+            ton_andel += (mal_andel - ton_andel) * begransa(0.08f * steg, 0, 0.5f);
+            if (fabsf(mal_andel - ton_andel) < 0.01f) ton_andel = mal_andel;
+            if (replik != NULL) {
+                /* Repliken följer med i en mattare variant av samma ton. */
+                lv_obj_set_style_text_color(replik, lv_color_mix(farg(FARG_OGA), lv_color_hex(0x8A9AA0), 140), LV_PART_MAIN);
+            }
+            lv_obj_invalidate(yta);
         }
-        lv_obj_invalidate(yta);
     }
 
     /* Repliken tonar in, står kvar och tonar ut. */
@@ -780,8 +795,7 @@ void ansikte_bygg(void)
     lv_obj_align(replik, LV_ALIGN_BOTTOM_MID, 0, -10);
     lv_label_set_text(replik, "");
 
-    farg_ljus = FARG_CYAN;
-    farg_mal  = FARG_CYAN;
+    ton_andel = 0;
     nu = mal = UTTRYCK[UTTRYCK_NEUTRAL];
     forra_yta.x1 = 1; forra_yta.x2 = 0;   /* tom */
     forra_tick_ms = lv_tick_get();
