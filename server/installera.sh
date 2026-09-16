@@ -55,7 +55,7 @@ cat > "$NOTIS_PLIST" <<PLIST
 <dict>
   <key>Label</key><string>$NOTIS_ETIKETT</string>
   <key>ProgramArguments</key>
-  <array><string>$HAR/notiser</string></array>
+  <array><string>$HAR/Notiser.app/Contents/MacOS/notiser</string></array>
   <key>RunAtLoad</key><true/>
   <key>KeepAlive</key><true/>
   <key>StandardOutPath</key><string>$HOME/Library/Logs/office-buddy-notiser.log</string>
@@ -68,5 +68,5 @@ launchctl load "$PLIST"
 launchctl unload "$NOTIS_PLIST" 2>/dev/null || true
 launchctl load "$NOTIS_PLIST"
 echo "Tjänsterna installerade och startade. Loggar: ~/Library/Logs/office-buddy.log och office-buddy-notiser.log"
-echo "Notisläsaren behöver Full diskåtkomst: lägg till $HAR/notiser i Systeminställningar."
+echo "Notisläsaren behöver Full diskåtkomst: lägg till $HAR/Notiser.app i Systeminställningar."
 echo "Stoppa innan en flashning:  launchctl unload $PLIST"
