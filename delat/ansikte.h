@@ -119,6 +119,14 @@ void ansikte_dromma(int32_t ms);
 void ansikte_leka(int32_t ms);
 
 /*
+ * En liten ikon uppe till höger som studsar in och tonar bort efter ms:
+ * ett kuvert (mejl), en pratbubbla (sms) eller en bubbla med T (Teams).
+ * hex är färgen, 0 ger benvitt.
+ */
+typedef enum { IKON_KUVERT = 1, IKON_BUBBLA, IKON_TEAMS } ansikte_ikon_t;
+void ansikte_ikon(ansikte_ikon_t typ, uint32_t hex, int32_t ms);
+
+/*
  * Vem som ska få veta när glaset trycks. Utan krok reagerar ansiktet självt
  * med ansikte_petad(); med humöret påslaget ska humöret få händelsen i
  * stället, så att en petning också gör buddyn gladare.

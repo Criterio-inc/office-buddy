@@ -23,6 +23,9 @@
  *   backup <ok|saknas [text]>  nattens backup, från datorn en gång per dag
  *   mote <minuter> <rubrik>    ett möte om så många minuter (0 = nu)
  *   mejl [#rrggbb] <text>      nytt mejl, med kontots färg först om man vill
+ *   sms [#rrggbb] <text>       nytt sms, pratbubbla på glaset
+ *   teams [#rrggbb] <text>     nytt Teams-meddelande, bubbla med T
+ *   hemma | borta              datorn låstes upp eller låstes
  *   paminnelse <text>          en påminnelse som förfaller
  *   vy <ansikte|klocka|timer>  byter vy, som ett svep
  *   timer <minuter>            ställer och startar timern, 0 stoppar

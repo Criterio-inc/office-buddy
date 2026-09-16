@@ -225,6 +225,22 @@ tyst i minst tio minuter. Mail måste vara igång. Färgerna står i
 `kontofarger` i `server/buddy.json`, med kontonas namn som de heter i
 Mail.
 
+## SMS, Teams och kuvertet
+
+Notiscentralen på Macen ser allt som ger en notis. Länktjänsten läser den
+var åttonde sekund och skickar sms och Teams-meddelanden till kortet: en
+pratbubbla eller en bubbla med T studsar in uppe till höger på glaset,
+ansiktet skiftar till appens färg, blicken går mot ikonen och raden säger
+vem och vad. Mejl får ett kuvert på samma sätt. Det kräver att Python har
+**Full diskåtkomst** i Systeminställningar under Integritet och säkerhet;
+tjänstens logg säger till om åtkomsten saknas. Vilka appar som räknas står
+i `notiser` i `server/buddy.json`.
+
+## Hemma och borta
+
+Låser du skärmen somnar buddyn. Låser du upp den vaknar den, tittar på dig
+och blinkar. Skärmlåset läses var femte sekund utan något tillstånd.
+
 ## Backupvakten
 
 Valfritt. Pekar `backup_status` och `offsite_status` i `server/buddy.json`

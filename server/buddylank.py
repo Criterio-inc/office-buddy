@@ -42,6 +42,12 @@ STANDARD = {
     "kalender_ignorera": ["shl", "hockey", "holiday", "helgdag", "siri", "birthday", "födelsedag"],
     "mote_varna_min": 10,
     "paminnelser": True,
+    "notiser": {
+        "com.apple.MobileSMS": ["sms", "#4c8dff"],
+        "com.microsoft.teams2": ["teams", "#6264a7"],
+        "com.microsoft.teams": ["teams", "#6264a7"],
+    },
+    "skarmlas": True,
 }
 
 
@@ -418,6 +424,100 @@ def mejl_lage():
     return antal, avs, amne, konto
 
 
+# ---- Notiserna: sms, Teams och annat som ger en notis ---------------------------
+
+NOTIS_DB = os.path.expanduser("~/Library/Group Containers/group.com.apple.usernoted/db2/db")
+NOTIS_VAR_S = 8
+NOTIS_TYST_S = 20
+
+
+def _plist_text(d, nyckel):
+    """Letar rekursivt efter en nyckel i en tolkad plist."""
+    if isinstance(d, dict):
+        if nyckel in d and isinstance(d[nyckel], str):
+            return d[nyckel]
+        for v in d.values():
+            t = _plist_text(v, nyckel)
+            if t:
+                return t
+    elif isinstance(d, list):
+        for v in d:
+            t = _plist_text(v, nyckel)
+            if t:
+                return t
+    return ""
+
+
+class Notisvakt:
+    """Läser notiscentralens databas: allt som ger en notis på Macen hamnar där.
+    Kräver Full diskåtkomst för Python; utan den säger loggen till en gång."""
+    def __init__(self, karta):
+        self.karta = karta          # app-id -> [typ, färg]
+        self.sista_id = None
+        self.klagat = False
+        self.tyst_till = {}
+
+    def _oppna(self):
+        import sqlite3
+        return sqlite3.connect(f"file:{NOTIS_DB}?mode=ro&immutable=1", uri=True, timeout=1)
+
+    def status(self):
+        try:
+            with self._oppna() as db:
+                n = db.execute("select count(*) from record").fetchone()[0]
+                self.sista_id = db.execute("select max(rec_id) from record").fetchone()[0] or 0
+            return f"läsbar, {n} poster"
+        except Exception as fel:
+            return f"ingen åtkomst ({str(fel)[:60]}). Ge Python Full diskåtkomst i Systeminställningar."
+
+    def kolla(self, lank):
+        if self.sista_id is None:
+            self.status()
+            if self.sista_id is None:
+                return
+        import plistlib
+        try:
+            with self._oppna() as db:
+                rader = db.execute(
+                    "select r.rec_id, a.identifier, r.data from record r join app a on a.app_id = r.app_id "
+                    "where r.rec_id > ? order by r.rec_id", (self.sista_id,)).fetchall()
+        except Exception as fel:
+            if not self.klagat:
+                logg(f"notiser: {str(fel)[:80]}")
+                self.klagat = True
+            return
+        for rec_id, app, blob in rader:
+            self.sista_id = max(self.sista_id, rec_id)
+            typ_farg = self.karta.get(app)
+            if not typ_farg:
+                continue
+            typ, farg = typ_farg[0], (typ_farg[1] if len(typ_farg) > 1 else "")
+            if time.time() < self.tyst_till.get(typ, 0):
+                continue
+            try:
+                d = plistlib.loads(bytes(blob))
+            except Exception:
+                d = {}
+            titel = _plist_text(d, "titl")
+            kropp = _plist_text(d, "body")
+            text = titel or app
+            if kropp:
+                text += ", " + kropp[:40].replace("\n", " ")
+            lank.skicka(f"{typ} {farg + ' ' if farg else ''}{text[:80]}")
+            self.tyst_till[typ] = time.time() + NOTIS_TYST_S
+
+
+# ---- Skärmlåset: hemma eller borta ------------------------------------------
+
+def skarm_last():
+    """Sant när skärmen är låst. Nyckeln finns bara i ioreg medan den är låst."""
+    try:
+        r = subprocess.run(["ioreg", "-n", "Root", "-d1"], capture_output=True, text=True, timeout=5)
+        return "CGSSessionScreenIsLocked" in r.stdout
+    except Exception:
+        return False
+
+
 class Mejlvakt:
     """En blick när olästa blir fler, högst en gång per tio minuter."""
     def __init__(self):
@@ -477,6 +577,9 @@ def main():
             logg("kalendern: " + (r.stderr.strip() or f"fel {r.returncode}"))
     except Exception as fel:
         logg(f"kalendern: {fel}")
+    notiser = Notisvakt(INST["notiser"]) if INST["notiser"] else None
+    if notiser:
+        logg("notiser: " + notiser.status())
     lage = mejl_lage() if INST["mejl"] else None
     if INST["mejl"]:
         logg("mejlen: " + (f"{lage[0]} olästa i inkorgen" if lage else "Mail svarar inte eller saknar tillstånd"))
@@ -497,6 +600,9 @@ def main():
     nasta_kalender = 0
     nasta_mejl = 0
     nasta_paminnelse = 0
+    nasta_notis = 0
+    nasta_las = 0
+    var_last = None
     while True:
         if lank.fd is None:
             if not lank.anslut():
@@ -539,6 +645,15 @@ def main():
         if nu >= nasta_mejl and INST["mejl"]:
             mejl.kolla(lank)
             nasta_mejl = nu + MEJL_VAR_S
+        if nu >= nasta_notis and notiser:
+            notiser.kolla(lank)
+            nasta_notis = nu + NOTIS_VAR_S
+        if nu >= nasta_las and INST["skarmlas"]:
+            last = skarm_last()
+            if var_last is not None and last != var_last:
+                lank.skicka("borta" if last else "hemma")
+            var_last = last
+            nasta_las = nu + 5
         if nu >= nasta_paminnelse and INST["paminnelser"]:
             paminnelser.kolla(lank)
             nasta_paminnelse = nu + PAMINNELSE_VAR_S

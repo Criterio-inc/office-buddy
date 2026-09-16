@@ -134,6 +134,20 @@ bool protokoll_rad(const char *inrad, char *svar, size_t storlek)
         snprintf(svar, storlek, "ob ok paminnelse");
         return true;
     }
+    if (borjar_med(rad, "hemma", &rest)) { humor_satt_hemma(true);  snprintf(svar, storlek, "ob ok hemma"); return true; }
+    if (borjar_med(rad, "borta", &rest)) { humor_satt_hemma(false); snprintf(svar, storlek, "ob ok borta"); return true; }
+    if (borjar_med(rad, "sms", &rest) || borjar_med(rad, "teams", &rest)) {
+        int typ = rad[0] == 's' ? 2 : 3;
+        uint32_t hex = 0;
+        if (rest[0] == '#') {
+            hex = (uint32_t)strtoul(rest + 1, NULL, 16);
+            const char *m = strchr(rest, ' ');
+            rest = m != NULL ? m + 1 : "";
+        }
+        humor_meddelande(typ, hex, rest);
+        snprintf(svar, storlek, "ob ok %s", typ == 2 ? "sms" : "teams");
+        return true;
+    }
     if (borjar_med(rad, "mejl", &rest)) {
         uint32_t hex = 0;
         if (rest[0] == '#') {

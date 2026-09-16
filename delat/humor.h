@@ -68,6 +68,15 @@ void humor_paminnelse(const char *text);
 /* Nytt mejl: en blick, en rad och kontots färg en stund. Inget ljud. hex 0 = ingen färg. */
 void humor_mejl(uint32_t hex, const char *text);
 
+/* Ett meddelande: 1 = mejl, 2 = sms, 3 = Teams. Ikon på glaset, en blick, en rad. */
+void humor_meddelande(int typ, uint32_t hex, const char *text);
+
+/*
+ * Hemma eller borta: datorn låstes upp eller låstes. Borta sover buddyn,
+ * hemma vaknar den och tittar på dig.
+ */
+void humor_satt_hemma(bool hemma);
+
 /* Nattens backup: ok tystar, saknas ger en bekymrad stund med texten. */
 void humor_satt_backup(bool ok, const char *text);
 /*

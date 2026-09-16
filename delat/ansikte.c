@@ -239,6 +239,11 @@ static uint32_t drom_fro;
 static int32_t  drom_byt_ms;
 static bool     drom_nyss;
 
+/* Ikonen. */
+static int32_t  ikon_kvar_ms, ikon_total_ms;
+static int      ikon_typ;
+static lv_color_t ikon_farg;
+
 /* Flugan. */
 static int32_t leka_kvar_ms;
 static float   fluga_x, fluga_y, fluga_vx, fluga_vy;
@@ -606,6 +611,10 @@ static void rutan(lv_area_t *ut)
         area_satt(&a, fluga_x - 18, fluga_y - 16, fluga_x + 18, fluga_y + 14);
         area_utvidga(ut, &a);
     }
+    if (ikon_kvar_ms > 0) {
+        area_satt(&a, ANSIKTE_BREDD - 64 - 34, 0, ANSIKTE_BREDD - 64 + 34, 46 + 30);
+        area_utvidga(ut, &a);
+    }
     float mh = fmaxf(mhj * 1.6f, mw * 0.5f) + m;
     area_satt(&a, mx - mw / 2 - m, my - mh, mx + mw / 2 + m, my + mh);
     area_utvidga(ut, &a);
@@ -672,6 +681,67 @@ static void rita(lv_event_t *e)
         rita_rekt(l, &ra, FARG_RODNAD, (lv_opa_t)(nu.rodnad * 200), LV_RADIUS_CIRCLE);
     }
     rita_mun(l, &mun, mx, my);
+
+    /* Ikonen: studsar in uppifrån, står, tonar bort. */
+    if (ikon_kvar_ms > 0) {
+        float gatt = (float)(ikon_total_ms - ikon_kvar_ms);
+        float in = begransa(gatt / 320.0f, 0, 1);
+        float studs = in < 1 ? (1 - in) * (1 - in) * 60 - sinf(in * (float)M_PI) * 10 : 0;
+        lv_opa_t opa = (lv_opa_t)(255 * begransa((float)ikon_kvar_ms / 500.0f, 0, 1));
+        float ix = ANSIKTE_BREDD - 64, iy = 46 - studs;   /* mitten av ikonen */
+        float w = 58, hh = 42;
+        lv_draw_rect_dsc_t d;
+        lv_draw_rect_dsc_init(&d);
+        d.bg_color = ikon_farg; d.bg_opa = opa; d.radius = 8;
+        lv_area_t a;
+        if (ikon_typ == IKON_KUVERT) {
+            area_satt(&a, ix - w / 2, iy - hh / 2, ix + w / 2, iy + hh / 2);
+            lv_draw_rect(l, &d, &a);
+            /* Fliken: två mörka streck från hörnen ned till mitten. */
+            lv_draw_line_dsc_t ld;
+            lv_draw_line_dsc_init(&ld);
+            ld.color = FARG_PUPILL; ld.width = 4; ld.opa = opa; ld.round_start = 1; ld.round_end = 1;
+            ld.p1.x = (lv_value_precise_t)lroundf(ix - w / 2 + 4); ld.p1.y = (lv_value_precise_t)lroundf(iy - hh / 2 + 4);
+            ld.p2.x = (lv_value_precise_t)lroundf(ix);             ld.p2.y = (lv_value_precise_t)lroundf(iy + 4);
+            lv_draw_line(l, &ld);
+            ld.p1.x = (lv_value_precise_t)lroundf(ix + w / 2 - 4);
+            lv_draw_line(l, &ld);
+        } else {
+            /* Pratbubbla: rundad ruta med en liten spets nere till vänster. */
+            d.radius = 14;
+            area_satt(&a, ix - w / 2, iy - hh / 2, ix + w / 2, iy + hh / 2 - 4);
+            lv_draw_rect(l, &d, &a);
+            lv_draw_triangle_dsc_t td;
+            lv_draw_triangle_dsc_init(&td);
+            td.color = ikon_farg; td.opa = opa;
+            td.p[0].x = (lv_value_precise_t)lroundf(ix - w / 2 + 10); td.p[0].y = (lv_value_precise_t)lroundf(iy + hh / 2 - 8);
+            td.p[1].x = (lv_value_precise_t)lroundf(ix - w / 2 + 24); td.p[1].y = (lv_value_precise_t)lroundf(iy + hh / 2 - 8);
+            td.p[2].x = (lv_value_precise_t)lroundf(ix - w / 2 + 8);  td.p[2].y = (lv_value_precise_t)lroundf(iy + hh / 2 + 6);
+            lv_draw_triangle(l, &td);
+            lv_draw_line_dsc_t ld;
+            lv_draw_line_dsc_init(&ld);
+            ld.color = FARG_PUPILL; ld.opa = opa; ld.round_start = 1; ld.round_end = 1;
+            if (ikon_typ == IKON_TEAMS) {
+                /* Ett T. */
+                ld.width = 5;
+                ld.p1.x = (lv_value_precise_t)lroundf(ix - 11); ld.p1.y = (lv_value_precise_t)lroundf(iy - 11);
+                ld.p2.x = (lv_value_precise_t)lroundf(ix + 11); ld.p2.y = ld.p1.y;
+                lv_draw_line(l, &ld);
+                ld.p1.x = (lv_value_precise_t)lroundf(ix); ld.p2.x = ld.p1.x; ld.p2.y = (lv_value_precise_t)lroundf(iy + 10);
+                lv_draw_line(l, &ld);
+            } else {
+                /* Tre prickar. */
+                for (int i = -1; i <= 1; i++) {
+                    lv_area_t pa;
+                    area_satt(&pa, ix + i * 13 - 3, iy - 5, ix + i * 13 + 3, iy + 1);
+                    lv_draw_rect_dsc_t pd;
+                    lv_draw_rect_dsc_init(&pd);
+                    pd.bg_color = FARG_PUPILL; pd.bg_opa = opa; pd.radius = LV_RADIUS_CIRCLE;
+                    lv_draw_rect(l, &pd, &pa);
+                }
+            }
+        }
+    }
 
     /* Flugan: en liten prick med två vingstreck. */
     if (leka_kvar_ms > 0) {
@@ -825,6 +895,8 @@ static void tick(lv_timer_t *t)
         if (forr > 1100 && start_kvar_ms <= 1100) { mal = UTTRYCK[UTTRYCK_START]; nu = mal; nu.v.h = 4; nu.h.h = 4; snabb_kvar_ms = 600; }
         if (start_kvar_ms <= 0) { ansikte_satt_uttryck(start_aterga); ansikte_blinka(); }
     }
+
+    if (ikon_kvar_ms > 0) ikon_kvar_ms -= dt;
 
     /* Flugan surrar omkring och blicken hänger med. */
     if (leka_kvar_ms > 0) {
@@ -1022,6 +1094,13 @@ void ansikte_dromma(int32_t ms)
 {
     drom_kvar_ms = ms;
     drom_byt_ms = 0;
+}
+
+void ansikte_ikon(ansikte_ikon_t typ, uint32_t hex, int32_t ms)
+{
+    ikon_typ = (int)typ;
+    ikon_farg = hex ? lv_color_hex(hex) : FARG_OGA;
+    ikon_kvar_ms = ikon_total_ms = ms;
 }
 
 void ansikte_leka(int32_t ms)

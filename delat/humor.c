@@ -27,6 +27,7 @@ static int   aldst_dagar;
 static int32_t replik_kvar_ms;               /* tystnad tills nästa replik ur oron */
 static claude_lage_t claude_lage = CLAUDE_JOBBAR;
 static bool lank_ok = true;
+static bool hemma = true;
 static int32_t varm_kvar_ms;                 /* tillfällig orange, t.ex. saknad backup */
 static int     klappar;                      /* klappar i följd */
 static int32_t sysslolos_ms;                 /* tid utan händelser, vaken */
@@ -195,8 +196,8 @@ void humor_tick(float timme, int32_t dt_ms)
     /* Somnar när energin är slut eller datorn sover; vaknar av morgonen, av ett lyft eller av datorn. */
     bool sov_forr = h.sover;
     if (!h.sover && h.energi < 0.10f) h.sover = true;
-    if (h.sover && h.energi > 0.22f && lank_ok)  h.sover = false;
-    if (!lank_ok) h.sover = true;
+    if (h.sover && h.energi > 0.22f && lank_ok && hemma)  h.sover = false;
+    if (!lank_ok || !hemma) h.sover = true;
     if (sov_forr != h.sover) {
         ansikte_sover(h.sover);
         if (!h.sover) {
@@ -500,14 +501,49 @@ void humor_paminnelse(const char *text)
     ljud(LJUD_BLIPP);
 }
 
+void humor_meddelande(int typ, uint32_t hex, const char *text)
+{
+    sysslolos_ms = 0;
+    static const char *const ORD[] = { "", "nytt mejl", "sms", "Teams" };
+    if (typ < 1 || typ > 3) typ = 1;
+    char rad[128];
+    snprintf(rad, sizeof(rad), "%s: %s", ORD[typ], text ? text : "");
+    if (hex != 0) ansikte_ton(hex, 8000);
+    ansikte_ikon((ansikte_ikon_t)typ, hex, 6000);
+    ansikte_tillfalligt(UTTRYCK_NYFIKEN, 2200);
+    ansikte_titta(0.8f, -0.7f);   /* mot ikonen */
+    ansikte_sag(rad, 8000);
+    if (typ != 1) ljud(LJUD_BLIPP);
+}
+
+void humor_satt_hemma(bool ny)
+{
+    if (ny == hemma) return;
+    hemma = ny;
+    if (!hemma) {
+        if (!h.sover) { h.sover = true; ansikte_sover(true); }
+    } else if (h.sover && h.energi > 0.22f && lank_ok) {
+        /* Du är tillbaka: vaknar och tittar på dig. */
+        h.sover = false;
+        ansikte_sover(false);
+        grund = valj();
+        ansikte_satt_uttryck(grund);
+        ansikte_tillfalligt(UTTRYCK_NYFIKEN, 3000);
+        ansikte_titta(0, -0.4f);
+        ansikte_blinka();
+        ljud(LJUD_BLIPP);
+    }
+}
+
 void humor_mejl(uint32_t hex, const char *text)
 {
     sysslolos_ms = 0;
     char rad[128];
     snprintf(rad, sizeof(rad), "nytt mejl: %s", text ? text : "");
     if (hex != 0) ansikte_ton(hex, 8000);
+    ansikte_ikon(IKON_KUVERT, hex, 6000);
     ansikte_tillfalligt(UTTRYCK_NYFIKEN, 2000);
-    ansikte_titta(0.7f, -0.3f);
+    ansikte_titta(0.8f, -0.7f);
     ansikte_sag(rad, 8000);
 }
 
