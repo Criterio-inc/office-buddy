@@ -1,5 +1,5 @@
 /*
- * Ljudet — få toner, låg volym, inga ord. Men som en gammal Atari.
+ * Ljudet — få toner, låg volym, inga ord. Mjuka klanger, som ett litet klockspel.
  *
  * Buddyn är tyst av princip. Det som finns är ett litet blipp när någon
  * knackar eller petar, en stigande tvåton när den lyfts, tre glada toner
@@ -45,20 +45,21 @@ typedef struct { float hz; int ms; float hz2, hz3; } ton_t;
 #define E6 1318.51f
 #define G6 1567.98f
 
-static const ton_t BLIPP[]     = { { E5, 60 }, { 0 } };
-static const ton_t LYFT[]      = { { C5, 70 }, { G5, 120 }, { 0 } };
-static const ton_t GLAD[]      = { { C5, 70 }, { E5, 70 }, { G5, 140 }, { 0 } };
+static const ton_t BLIPP[]     = { { E5, 160 }, { 0 } };
+static const ton_t LYFT[]      = { { C5, 140 }, { G5, 260 }, { 0 } };
+static const ton_t GLAD[]      = { { C5, 130 }, { E5, 130 }, { G5, 300 }, { 0 } };
 static const ton_t TRUDELUTT[] = {
-    { C5, 75 }, { E5, 75 }, { G5, 75 }, { C6, 110 },
-    { G5, 75 }, { C6, 75 }, { E6, 130 },
-    { 0,  40 },
-    { C6, 420, E6, G6 },    /* ackordet: arpeggio i en enda röst */
+    { C5, 120 }, { E5, 120 }, { G5, 120 }, { C6, 200 },
+    { G5, 120 }, { C6, 120 }, { E6, 240 },
+    { 0,  60 },
+    { C6, 700, E6, G6 },    /* ackordet, tre mjuka toner tillsammans */
     { 0 },
 };
 
 /*
- * Fyrkantvåg med avklingning. Volymen är lägre än för sinus eftersom en
- * fyrkant låter mycket starkare vid samma amplitud.
+ * Mjuka toner: en sinus med lite övertoner, snabbt anslag och en klang som
+ * dör ut som en klockspelston. Ett ackord spelas som tre toner samtidigt,
+ * inte som ett arpeggio. Inget fyrkantigt, inget som skär.
  */
 static void spela_ton(const ton_t *t)
 {
@@ -67,27 +68,27 @@ static void spela_ton(const ton_t *t)
     int skrivet = 0;
     const float toner[3] = { t->hz, t->hz2, t->hz3 };
     int antal_toner = t->hz3 > 0 ? 3 : (t->hz2 > 0 ? 2 : 1);
-    const int arp_n = TAKT_HZ * 14 / 1000;   /* 14 ms per ton i arpeggiot */
-    float fas = 0;
+    const int anslag_n = TAKT_HZ * 6 / 1000;      /* 6 ms anslag */
+    const float tau = (float)n * 0.45f;            /* klangen dör ut över tonen */
     while (skrivet < n) {
         int del = n - skrivet;
         if (del > (int)(sizeof(buf) / sizeof(buf[0]))) del = sizeof(buf) / sizeof(buf[0]);
         for (int i = 0; i < del; i++) {
             int k = skrivet + i;
-            float hz = toner[(k / arp_n) % antal_toner];
             float v = 0;
-            if (hz > 0) {
-                fas += hz / TAKT_HZ;
-                if (fas >= 1) fas -= 1;
-                v = fas < 0.5f ? 1.0f : -1.0f;
+            if (t->hz > 0) {
+                float env = (k < anslag_n ? (float)k / anslag_n : 1.0f) * expf(-(float)k / tau);
+                float env2 = expf(-(float)k / (tau * 0.5f));   /* övertonerna dör ut fortare */
+                for (int j = 0; j < antal_toner; j++) {
+                    float fas = 2 * (float)M_PI * toner[j] * k / TAKT_HZ;
+                    v += sinf(fas) * env + 0.28f * sinf(2 * fas) * env2 + 0.08f * sinf(3 * fas) * env2;
+                }
+                v /= (float)antal_toner;
+                /* Sista biten tonas ned så att en avbruten klang inte knäpper. */
+                int kvar = n - k;
+                if (kvar < anslag_n) v *= (float)kvar / anslag_n;
             }
-            /* Kort kant mot knäpp, sedan klingar tonen av som ett gammalt chip. */
-            float kant = 1.0f;
-            int kantn = TAKT_HZ * 4 / 1000;
-            if (k < kantn) kant = (float)k / kantn;
-            else if (n - k < kantn) kant = (float)(n - k) / kantn;
-            float avkling = 1.0f - 0.45f * (float)k / (float)n;
-            buf[i] = (int16_t)(v * kant * avkling * 0.28f * 32767);
+            buf[i] = (int16_t)(v * 0.62f * 32767);
         }
         esp_codec_dev_write(hogtalare, buf, del * (int)sizeof(int16_t));
         skrivet += del;
@@ -103,7 +104,7 @@ static void uppgift(void *arg)
         if (!pa || volym <= 0 || hogtalare == NULL) continue;
         const ton_t *toner = l == LJUD_BLIPP ? BLIPP : l == LJUD_LYFT ? LYFT
                            : l == LJUD_GLAD ? GLAD : TRUDELUTT;
-        static const ton_t paus = { 0, 12 };
+        static const ton_t paus = { 0, 20 };
         for (const ton_t *t = toner; t->ms > 0; t++) {
             spela_ton(t);
             spela_ton(&paus);

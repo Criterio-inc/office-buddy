@@ -32,7 +32,7 @@ datorn på USB-C hela tiden, både för ström och för data.
 | CST816S pekskärm | petningar |
 | QMI8658 rörelsesensor | knack och lyft |
 | PCF85063 klocka | tid på dygnet, humöret |
-| ES8311 ljud | tre små toner, inga ord |
+| ES8311 ljud | några mjuka klanger, inga ord |
 
 ## Delarna
 
@@ -267,10 +267,10 @@ python3 ~/Projects/office-buddy/server/buddylank.py --skicka "sag lunch om tio m
 
 ## Ljudet
 
-Buddyn är tyst av princip. Det som finns är ett litet blipp när någon
-knackar eller petar, en stigande tvåton när den lyfts, och tre glada toner
-när något som väntade blev gjort. Volymen är låg. Tystas helt med:
-
+Buddyn är tyst av princip. Det som finns är ett litet plink när någon
+knackar eller petar, en stigande tvåklang, tre glada toner när något som
+väntade blev gjort, och en liten trudelutt vid start och på morgonen. Mjuka
+klanger som ett litet klockspel, låg volym. Tystas helt med:
 ```bash
 python3 ~/Projects/office-buddy/server/buddylank.py --skicka "ljud 0"
 ```

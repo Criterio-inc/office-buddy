@@ -4,7 +4,7 @@ A small face on your shelf that blinks, yawns, looks at you and follows a
 mood over the day. It tells you when Claude is waiting for you, when a
 meeting starts in ten minutes, when a reminder is due, and when a new mail
 arrives, and it says very little else. No words spoken, only eyes, a mouth,
-colours and a few 8-bit beeps.
+colours and a few soft chimes.
 
 It runs on a Waveshare **ESP32-S3-Touch-AMOLED-1.8** (368 × 448, portrait)
 that sits in your Mac's USB-C port. The face, the mood and the wire protocol
@@ -67,7 +67,7 @@ Waveshare ESP32-S3-Touch-AMOLED-1.8. Everything on the board gets a job:
 | CO5300 AMOLED, CST816S touch | the face, taps and swipes |
 | QMI8658 IMU | knocks and lifts |
 | PCF85063 RTC | time of day for the mood |
-| ES8311 codec | three small square-wave tones and a jingle |
+| ES8311 codec | a few soft chimes and a little jingle |
 | TCA9554 expander | panel power and reset (see the lesson below) |
 
 No battery. The board lives on USB-C for power. The data link is USB when the
