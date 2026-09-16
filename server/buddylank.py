@@ -577,7 +577,9 @@ def main():
             logg("kalendern: " + (r.stderr.strip() or f"fel {r.returncode}"))
     except Exception as fel:
         logg(f"kalendern: {fel}")
-    notiser = Notisvakt(INST["notiser"]) if INST["notiser"] else None
+    # Notiserna läses av den egna tjänsten server/notiser (Full diskåtkomst
+    # ges till den filen). Pythonvakten finns kvar för den som hellre vill det.
+    notiser = Notisvakt(INST["notiser"]) if INST.get("notiser_i_python") else None
     if notiser:
         logg("notiser: " + notiser.status())
     lage = mejl_lage() if INST["mejl"] else None

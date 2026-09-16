@@ -22,3 +22,5 @@ server/kalender
 
 # Egna inställningar, aldrig i git
 server/buddy.json
+
+server/notiser
