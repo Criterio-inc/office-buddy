@@ -28,6 +28,9 @@
 #define FARG_BAKGRUND lv_color_hex(0x000000)
 #define FARG_CYAN     lv_color_hex(ANSIKTE_FARG_GRUND)   /* grundfärgen i vila */
 #define FARG_ORANGE   lv_color_hex(0xFFA042)   /* varm, när något behöver dig */
+#define FARG_PUPILL   lv_color_hex(0x0A1410)   /* nästan svart, med en aning grönt */
+#define FARG_GLIMT    lv_color_hex(0xF2FAF0)   /* ljusglimten i pupillen */
+#define FARG_RODNAD   lv_color_hex(0xF08A8A)
 #define FARG_REPLIK_K lv_color_hex(0x9AB8BF)   /* dämpat, orden ska inte tävla med ögonen */
 
 /*
@@ -92,6 +95,7 @@ typedef struct {
     float bryn;        /* 0..1, hur synligt ögonbrynet är */
     float bryn_hojd;   /* 0..1, hur högt över ögat det sitter */
     float bryn_lut;    /* -1..1, + = inre änden lägre (arg), - = inre änden högre (ledsen) */
+    float pupill;      /* 0..1, pupillens storlek som andel av ögats bredd; 0 = ingen */
 } oga_t;
 
 typedef struct {
@@ -107,13 +111,14 @@ typedef struct {
     mun_t mun;
     float blick_x, blick_y;   /* vart uttrycket i sig tittar, -1..1 */
     float darr;               /* 0..1, hur oroligt allt darrar */
+    float rodnad;             /* 0..1, fläckar under ögonen */
 } param_t;
 
 #define ANTAL_TAL (sizeof(param_t) / sizeof(float))
 
 /* ---- Uttrycken --------------------------------------------------------- */
 
-#define OGA_STD .w = 84, .h = 96, .r = 0.8f, .oppen = 1
+#define OGA_STD .w = 84, .h = 96, .r = 0.8f, .oppen = 1, .pupill = 0.40f
 #define OGA(...) { __VA_ARGS__ }
 #define BADA(o)  .v = o, .h = o
 
@@ -124,7 +129,7 @@ static const param_t UTTRYCK[UTTRYCK_ANTAL] = {
                                .mun = { .w = 64, .kurva = 0.9f } },
     [UTTRYCK_VALDIGT_GLAD] = { BADA(OGA(OGA_STD, .glad = 0.72f, .bryn = 1, .bryn_hojd = 0.45f)),
                                .mun = { .w = 84, .h = 42, .platt = 1 } },
-    [UTTRYCK_FORVANAD]     = { BADA(OGA(.w = 84, .h = 88, .r = 1, .oppen = 1, .bryn = 1, .bryn_hojd = 0.6f)),
+    [UTTRYCK_FORVANAD]     = { BADA(OGA(.w = 84, .h = 88, .r = 1, .oppen = 1, .bryn = 1, .bryn_hojd = 0.6f, .pupill = 0.3f)),
                                .mun = { .w = 24, .h = 32 }, .blick_y = -0.1f },
     [UTTRYCK_ENTUSIASTISK] = { BADA(OGA(OGA_STD, .glad = 0.55f, .botten = 0.1f, .bryn = 1, .bryn_hojd = 0.5f)),
                                .mun = { .w = 92, .h = 46, .platt = 1 } },
@@ -136,9 +141,9 @@ static const param_t UTTRYCK[UTTRYCK_ANTAL] = {
                                .mun = { .w = 46, .kurva = -0.55f, .vag = 0.35f }, .blick_y = 0.25f },
     [UTTRYCK_BESVIKEN]     = { BADA(OGA(OGA_STD, .lock = 0.45f, .lutning = -0.35f, .bryn = 1, .bryn_hojd = 0.15f, .bryn_lut = -0.3f)),
                                .mun = { .w = 42, .kurva = -0.5f } },
-    [UTTRYCK_OROLIG]       = { BADA(OGA(.w = 82, .h = 86, .r = 1, .oppen = 1, .lock = 0.18f, .lutning = -0.6f, .bryn = 1, .bryn_hojd = 0.4f, .bryn_lut = -0.7f)),
+    [UTTRYCK_OROLIG]       = { BADA(OGA(.w = 82, .h = 86, .r = 1, .oppen = 1, .lock = 0.18f, .lutning = -0.6f, .bryn = 1, .bryn_hojd = 0.4f, .bryn_lut = -0.7f, .pupill = 0.3f)),
                                .mun = { .w = 30, .h = 14, .platt = 1 }, .darr = 0.3f },
-    [UTTRYCK_ARG]          = { BADA(OGA(OGA_STD, .lock = 0.3f, .lutning = 0.85f, .bryn = 1, .bryn_hojd = 0.2f, .bryn_lut = 0.8f)),
+    [UTTRYCK_ARG]          = { BADA(OGA(OGA_STD, .lock = 0.3f, .lutning = 0.85f, .bryn = 1, .bryn_hojd = 0.2f, .bryn_lut = 0.8f, .pupill = 0.26f)),
                                .mun = { .w = 46, .kurva = -0.5f } },
     [UTTRYCK_FUNDERSAM]    = { .v = OGA(OGA_STD, .lock = 0.12f, .bryn = 1, .bryn_hojd = 0.5f, .bryn_lut = 0.15f),
                                .h = OGA(OGA_STD, .lock = 0.3f, .lutning = 0.2f, .bryn = 1, .bryn_hojd = 0.12f, .bryn_lut = 0.1f),
@@ -149,14 +154,14 @@ static const param_t UTTRYCK[UTTRYCK_ANTAL] = {
                                .mun = { .w = 16, .h = 18 }, .blick_y = 0.2f },
     [UTTRYCK_GASPAR]       = { BADA(OGA(OGA_STD, .glad = 0.95f)),
                                .mun = { .w = 46, .h = 62 } },
-    [UTTRYCK_STRESSAD]     = { BADA(OGA(.w = 66, .h = 66, .r = 1, .oppen = 1, .lock = 0.1f, .lutning = -0.3f, .bryn = 1, .bryn_hojd = 0.35f, .bryn_lut = -0.5f)),
+    [UTTRYCK_STRESSAD]     = { BADA(OGA(.w = 66, .h = 66, .r = 1, .oppen = 1, .lock = 0.1f, .lutning = -0.3f, .bryn = 1, .bryn_hojd = 0.35f, .bryn_lut = -0.5f, .pupill = 0.22f)),
                                .mun = { .w = 52, .vag = 1 }, .darr = 1 },
-    [UTTRYCK_NYFIKEN]      = { .v = OGA(.w = 96, .h = 106, .r = 0.8f, .oppen = 1, .bryn = 1, .bryn_hojd = 0.55f),
-                               .h = OGA(.w = 72, .h = 80, .r = 0.8f, .oppen = 1, .lock = 0.1f),
+    [UTTRYCK_NYFIKEN]      = { .v = OGA(.w = 96, .h = 106, .r = 0.8f, .oppen = 1, .bryn = 1, .bryn_hojd = 0.55f, .pupill = 0.44f),
+                               .h = OGA(.w = 72, .h = 80, .r = 0.8f, .oppen = 1, .lock = 0.1f, .pupill = 0.4f),
                                .mun = { .w = 30, .kurva = 0.45f }, .blick_x = 0.3f, .blick_y = -0.15f },
-    [UTTRYCK_KAR]          = { BADA(OGA(.w = 92, .h = 88, .r = 0.5f, .oppen = 1, .form = 1)),
+    [UTTRYCK_KAR]          = { BADA(OGA(.w = 92, .h = 88, .r = 0.5f, .oppen = 1, .form = 1, .pupill = 0)),
                                .mun = { .w = 56, .kurva = 0.8f } },
-    [UTTRYCK_OVERVALDIGAD] = { BADA(OGA(.w = 84, .h = 84, .r = 1, .oppen = 1, .form = 2)),
+    [UTTRYCK_OVERVALDIGAD] = { BADA(OGA(.w = 84, .h = 84, .r = 1, .oppen = 1, .form = 2, .pupill = 0)),
                                .mun = { .w = 50, .vag = 0.8f }, .darr = 0.6f },
     [UTTRYCK_SOVER]        = { BADA(OGA(OGA_STD, .glad = 1)),
                                .mun = { .w = 22, .kurva = 0.2f }, .blick_y = 0.15f },
@@ -203,6 +208,14 @@ static float   blick_mal_x, blick_mal_y;
 static int32_t blick_kvar_ms;          /* tills blicken vandrar vidare */
 static int32_t blick_lasta_ms;         /* hålls kvar efter ansikte_titta() */
 static float   darr_x, darr_y;
+
+/* Pupillerna gör små egna hopp, sackader, som ögongloben inte följer. */
+static float   sackad_x, sackad_y, sackad_mal_x, sackad_mal_y;
+static int32_t sackad_kvar_ms;
+
+/* Kvicka övergångar en kort stund efter ett byte, så reaktioner känns snabba. */
+static int32_t snabb_kvar_ms;
+static int32_t rodnad_kvar_ms;
 
 /* Andningen. */
 static float   andning_fas;
@@ -351,6 +364,8 @@ static void rita_spiral(lv_layer_t *l, float cx, float cy, float w, float snurr)
  * Ett öga. hoger säger vilket, eftersom lockets lutning speglas: det inre
  * hörnet sitter till höger på vänster öga och till vänster på höger öga.
  */
+static float pup_x, pup_y;   /* pupillernas riktning, -1..1, sätts i rita() */
+
 static void rita_oga(lv_layer_t *l, const oga_t *o, float cx, float cy, bool hoger, float oppen_extra, float snurr)
 {
     float w = o->w;
@@ -364,6 +379,30 @@ static void rita_oga(lv_layer_t *l, const oga_t *o, float cx, float cy, bool hog
     int32_t r = (int32_t)(o->r * fminf(w, h) / 2);
 
     rita_rekt(l, &a, FARG_LJUS, LV_OPA_COVER, r);
+
+    /*
+     * Pupillen: en mörk cirkel som följer blicken med större utslag än
+     * ögat, plus sina egna små hopp. Ritas före locken så att en blinkning
+     * täcker den. En liten glimt uppe till vänster ger den liv.
+     */
+    /* Under en glad båge finns inget öga att se pupillen i, så den krymper bort. */
+    float pupill = o->pupill * (1 - begransa((o->glad - 0.2f) / 0.3f, 0, 1));
+    if (pupill > 0.02f) {
+        float rp = pupill * w * 0.5f;
+        float h_full = o->h;   /* pupillen rör sig i det öppna ögat, inte i det blinkande */
+        float pr = fminf(rp, h * 0.48f);
+        float px = cx + (pup_x) * (w * 0.5f - rp) * 0.9f;
+        float py = cy + (pup_y) * (h_full * 0.5f - rp) * 0.8f;
+        if (py - pr < cy - h / 2) py = cy - h / 2 + pr;
+        if (py + pr > cy + h / 2) py = cy + h / 2 - pr;
+        lv_area_t pa;
+        area_satt(&pa, px - pr, py - pr, px + pr, py + pr);
+        rita_rekt(l, &pa, FARG_PUPILL, LV_OPA_COVER, LV_RADIUS_CIRCLE);
+        float gr = fmaxf(2.0f, pr * 0.28f);
+        lv_area_t ga;
+        area_satt(&ga, px - pr * 0.42f - gr, py - pr * 0.42f - gr, px - pr * 0.42f + gr, py - pr * 0.42f + gr);
+        rita_rekt(l, &ga, FARG_GLIMT, LV_OPA_80, LV_RADIUS_CIRCLE);
+    }
 
     /*
      * Det som täcker ögat ritas i bakgrundsfärgen och får bara verka inom
@@ -513,6 +552,7 @@ static void rutan(lv_area_t *ut)
     area_satt(ut, ovx - vw / 2 - m, ovy - vh / 2 - m - bv, ovx + vw / 2 + m, ovy + vh / 2 + m);
     area_satt(&a, ohx - hw / 2 - m, ohy - hh / 2 - m - bh, ohx + hw / 2 + m, ohy + hh / 2 + m);
     area_utvidga(ut, &a);
+    if (nu.rodnad > 0.01f) { ut->y2 += (int32_t)(vh * 0.3f); }
     float mh = fmaxf(mhj * 1.6f, mw * 0.5f) + m;
     area_satt(&a, mx - mw / 2 - m, my - mh, mx + mw / 2 + m, my + mh);
     area_utvidga(ut, &a);
@@ -534,8 +574,20 @@ static void rita(lv_event_t *e)
     h.w *= SKALA; h.h *= SKALA;
     mun.w *= SKALA; mun.h *= SKALA;
 
+    pup_x = begransa(nu.blick_x + blick_x + sackad_x, -1, 1);
+    pup_y = begransa(nu.blick_y + blick_y + sackad_y, -1, 1);
     rita_oga(l, &v, ovx, ovy, false, blink_oppen * andas_extra, snurr);
     rita_oga(l, &h, ohx, ohy, true,  blink_oppen * andas_extra, -snurr);
+
+    /* Rodnaden: två mjuka fläckar snett under ögonen. */
+    if (nu.rodnad > 0.02f) {
+        float rw = v.w * 0.55f, rh = v.h * 0.22f;
+        lv_area_t ra;
+        area_satt(&ra, ovx - rw / 2 - v.w * 0.12f, ovy + v.h * 0.5f + 6, ovx + rw / 2 - v.w * 0.12f, ovy + v.h * 0.5f + 6 + rh);
+        rita_rekt(l, &ra, FARG_RODNAD, (lv_opa_t)(nu.rodnad * 150), LV_RADIUS_CIRCLE);
+        area_satt(&ra, ohx - rw / 2 + h.w * 0.12f, ohy + h.h * 0.5f + 6, ohx + rw / 2 + h.w * 0.12f, ohy + h.h * 0.5f + 6 + rh);
+        rita_rekt(l, &ra, FARG_RODNAD, (lv_opa_t)(nu.rodnad * 150), LV_RADIUS_CIRCLE);
+    }
     rita_mun(l, &mun, mx, my);
 }
 
@@ -570,8 +622,10 @@ static void tick(lv_timer_t *t)
     if (dt > 100) dt = 100;
     float steg = (float)dt / TICK_MS;
 
-    /* 1. Uttrycket glider mot sitt mål. */
-    float k = begransa(0.16f * steg, 0, 0.7f);
+    /* 1. Uttrycket glider mot sitt mål, kvickt strax efter ett byte. */
+    if (snabb_kvar_ms > 0) snabb_kvar_ms -= dt;
+    float k = begransa((snabb_kvar_ms > 0 ? 0.34f : 0.16f) * steg, 0, 0.7f);
+    if (rodnad_kvar_ms > 0) { rodnad_kvar_ms -= dt; mal.rodnad = 1; } else mal.rodnad = 0;
     float *a = (float *)&nu, *b = (float *)&mal;
     for (size_t i = 0; i < ANTAL_TAL; i++) a[i] += (b[i] - a[i]) * k;
 
@@ -607,6 +661,16 @@ static void tick(lv_timer_t *t)
     float kb = begransa(0.22f * steg, 0, 0.8f);
     blick_x += (blick_mal_x - blick_x) * kb;
     blick_y += (blick_mal_y - blick_y) * kb;
+
+    /* Pupillernas små hopp: nytt mål då och då, dit på ett par bildrutor. */
+    sackad_kvar_ms -= dt;
+    if (sackad_kvar_ms <= 0) {
+        sackad_mal_x = sover ? 0 : slump(-0.16f, 0.16f);
+        sackad_mal_y = sover ? 0 : slump(-0.10f, 0.10f);
+        sackad_kvar_ms = (int32_t)slump(400, 2600);
+    }
+    sackad_x += (sackad_mal_x - sackad_x) * begransa(0.55f * steg, 0, 0.9f);
+    sackad_y += (sackad_mal_y - sackad_y) * begransa(0.55f * steg, 0, 0.9f);
 
     darr_x = darr_x * 0.82f + slump(-0.35f, 0.35f) * (0.4f + nu.darr);
     darr_y = darr_y * 0.82f + slump(-0.35f, 0.35f) * (0.4f + nu.darr);
@@ -732,8 +796,11 @@ void ansikte_satt_uttryck(uttryck_t u)
 {
     if (u >= UTTRYCK_ANTAL) return;
     uttryck_nu = u;
+    float r = mal.rodnad;
     mal = UTTRYCK[u];
+    mal.rodnad = r;
     tillfalligt_kvar_ms = 0;
+    snabb_kvar_ms = 380;
 }
 
 uttryck_t ansikte_uttryck(void)
@@ -805,6 +872,27 @@ void ansikte_petad(void)
 {
     ansikte_tillfalligt(UTTRYCK_FORVANAD, 1100);
     ansikte_blinka();
+}
+
+void ansikte_rodna(int32_t ms)
+{
+    rodnad_kvar_ms = ms;
+}
+
+void ansikte_klappad(int antal)
+{
+    if (antal <= 1) {
+        /* Första klappen: tittar upp mot handen med stora pupiller. */
+        ansikte_tillfalligt(UTTRYCK_NYFIKEN, 1400);
+        ansikte_titta(0, -0.9f);
+    } else if (antal == 2) {
+        ansikte_tillfalligt(UTTRYCK_GLAD, 1600);
+        ansikte_titta(0, -0.7f);
+    } else {
+        /* Fler i rad: blundar nöjt och rodnar. */
+        ansikte_tillfalligt(UTTRYCK_NOJD, 2600);
+        ansikte_rodna(3200);
+    }
 }
 
 void ansikte_sover(bool s)

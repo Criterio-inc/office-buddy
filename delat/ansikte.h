@@ -102,6 +102,12 @@ void ansikte_gaspa(void);
 /* Reagerar på en petning: en kort förvåning, sedan tillbaka. */
 void ansikte_petad(void);
 
+/* Rodnar: två mjuka fläckar under ögonen som tonar in och ut igen. */
+void ansikte_rodna(int32_t ms);
+
+/* Tittar upp mot den som klappar, med stora pupiller, en kort stund. */
+void ansikte_klappad(int antal);
+
 /*
  * Vem som ska få veta när glaset trycks. Utan krok reagerar ansiktet självt
  * med ansikte_petad(); med humöret påslaget ska humöret få händelsen i

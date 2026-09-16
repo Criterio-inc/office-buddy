@@ -229,7 +229,8 @@ static void simulera(lv_display_t *skarm, uint32_t ms)
 }
 
 static int bildlage(const char *bildfil, const char *serie, const char *dag, int antal, int steg,
-                    const char *uttryck, int tid, bool blink, const char *sag, bool varm, const char *vy, const char *radarg)
+                    const char *uttryck, int tid, bool blink, const char *sag, bool varm, const char *vy,
+                    const char **rader, int antal_rader)
 {
     /* LVGL kräver att bufferten är minnesjusterad, annars snurrar en assert
      * tyst på full CPU. */
@@ -271,7 +272,12 @@ static int bildlage(const char *bildfil, const char *serie, const char *dag, int
     if (sag != NULL) ansikte_sag(sag, 20000);
     if (varm) ansikte_varm(true);
     if (vy != NULL) { char r[64], sv[96]; snprintf(r, sizeof(r), "vy %s", vy); protokoll_rad(r, sv, sizeof(sv)); }
-    if (radarg != NULL) { char sv[128]; protokoll_rad(radarg, sv, sizeof(sv)); printf("%s\n", sv); }
+    for (int i = 0; i < antal_rader; i++) {
+        char sv[128];
+        protokoll_rad(rader[i], sv, sizeof(sv));
+        printf("%s\n", sv);
+        if (i + 1 < antal_rader) simulera(skarm, 400);
+    }
 
     simulera(skarm, (uint32_t)tid);
     if (blink) ansikte_blinka();
@@ -307,6 +313,7 @@ int main(int argc, char **argv)
 {
     const char *bildfil = NULL, *serie = NULL, *uttryck = NULL, *dag = NULL;
     const char *sag = NULL, *vy = NULL, *radarg = NULL;
+    const char *rader[8]; int antal_rader = 0;
     bool varm = false;
     int antal = 10, steg = 33, tid = 600;
     bool blink = false;
@@ -322,7 +329,10 @@ int main(int argc, char **argv)
         else if (strcmp(argv[i], "--sag") == 0      && i + 1 < argc) sag = argv[++i];
         else if (strcmp(argv[i], "--varm") == 0) varm = true;
         else if (strcmp(argv[i], "--vy") == 0       && i + 1 < argc) vy = argv[++i];
-        else if (strcmp(argv[i], "--rad") == 0      && i + 1 < argc) radarg = argv[++i];
+        else if (strcmp(argv[i], "--rad") == 0      && i + 1 < argc) {
+            /* Flera --rad får ges; de körs i ordning med lite simulerad tid emellan. */
+            if (antal_rader < 8) rader[antal_rader++] = argv[++i]; else i++;
+        }
         else if (strcmp(argv[i], "--dag") == 0      && i + 1 < argc) dag = argv[++i];
         else if (strcmp(argv[i], "--fart") == 0     && i + 1 < argc) klocka_fart = (float)atof(argv[++i]);
         else if (strcmp(argv[i], "--vantande") == 0 && i + 1 < argc) vantande = atoi(argv[++i]);
@@ -339,7 +349,7 @@ int main(int argc, char **argv)
     lv_tick_set_cb(tick_nu);
 
     if (bildfil != NULL || serie != NULL || dag != NULL) {
-        return bildlage(bildfil, serie, dag, antal, steg, uttryck, tid, blink, sag, varm, vy, radarg);
+        return bildlage(bildfil, serie, dag, antal, steg, uttryck, tid, blink, sag, varm, vy, rader, antal_rader);
     }
 
     lv_rand_set_seed((uint32_t)time(NULL));

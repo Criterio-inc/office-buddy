@@ -28,6 +28,8 @@ static int32_t replik_kvar_ms;               /* tystnad tills nästa replik ur o
 static claude_lage_t claude_lage = CLAUDE_JOBBAR;
 static bool lank_ok = true;
 static int32_t varm_kvar_ms;                 /* tillfällig orange, t.ex. saknad backup */
+static int     klappar;                      /* klappar i följd */
+static int32_t klapp_kvar_ms;                /* tills följden bryts */
 static bool sov_for_lanken;
 static int32_t claude_paminn_ms;             /* tills nästa lilla blick mot datorn */
 
@@ -214,6 +216,7 @@ void humor_tick(float timme, int32_t dt_ms)
     }
 
     if (replik_kvar_ms > 0) replik_kvar_ms -= dt_ms;
+    if (klapp_kvar_ms > 0) { klapp_kvar_ms -= dt_ms; if (klapp_kvar_ms <= 0) klappar = 0; }
     if (varm_kvar_ms > 0) {
         varm_kvar_ms -= dt_ms;
         if (varm_kvar_ms <= 0 && claude_lage == CLAUDE_JOBBAR) ansikte_varm(false);
@@ -299,11 +302,14 @@ void humor_handelse(humor_handelse_t e)
             ansikte_sover(false);
             ansikte_tillfalligt(UTTRYCK_SOMNIG, 2500);
         } else {
-            ansikte_petad();
+            /* Klappar i följd: första tittar upp, andra ler, tredje blundar nöjt. */
+            klappar++;
+            klapp_kvar_ms = 2200;
+            ansikte_klappad(klappar);
         }
-        gladje_extra += 0.25f;
+        gladje_extra += klappar >= 3 ? 0.4f : 0.25f;
         vaken_extra  += 0.06f;
-        ljud(LJUD_BLIPP);
+        if (klappar <= 2) ljud(LJUD_BLIPP);
         break;
     case HANDELSE_LYFT:
         vaken_extra += 0.35f;
