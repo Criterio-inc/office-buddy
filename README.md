@@ -41,6 +41,7 @@ are in Swedish; the protocol keywords are too. That is part of its charm.*
 | Nightly backup missing | orange, worried, "backup saknas" (optional, reads your own status files) |
 | Timer done | orange, "tiden är ute", jingle |
 | A knock or a tap | **acknowledges** everything: back to green, line cleared, a content nod |
+| Pats in a row | looks up at your hand, then smiles, then closes its eyes and blushes |
 | Swipe left | a clock: big digits, the date, seconds as a growing line |
 | Swipe again | a timer: tap top +5 min, bottom −5, middle to start |
 | Lift the board | surprised; wakes it up if asleep |
@@ -154,7 +155,8 @@ The full protocol is documented in [`delat/protokoll.h`](delat/protokoll.h):
 - `server/` is the Mac side: the link, the calendar/reminder helper
   (EventKit, Swift), the installers and the Claude hooks.
 
-The face is drawn from shapes, not images: eyes are rounded rectangles cut
+The face is drawn from shapes, not images: eyes are rounded rectangles with
+a dark pupil that follows the gaze and makes small saccades of its own, cut
 by black lids and arcs, brows are strokes, the mouth is an arc, a line or an
 open shape. Every expression is a set of numbers, and motion is those
 numbers gliding towards their targets, so nothing ever jumps.

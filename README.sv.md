@@ -40,10 +40,11 @@ datorn på USB-C hela tiden, både för ström och för data.
 känner bara till LVGL och byggs in i både kortet och emulatorn, så det som
 syns i fönstret är exakt det som hamnar på glaset.
 
-Ansiktet ritas som former, inte bilder. Ögonen är rundade rektanglar som
-täcks av svarta lock och bågar, ögonbrynen är korta streck som tonar in i
-de uttryck som behöver dem, munnen är en båge, ett streck eller en öppen
-form. Varje uttryck är en uppsättning tal, och rörelse är att talen glider mot
+Ansiktet ritas som former, inte bilder. Ögonen är rundade rektanglar med
+en mörk pupill som följer blicken, gör små egna hopp och krymper när
+buddyn är arg eller stressad; de täcks av svarta lock och bågar, ögonbrynen
+är korta streck som tonar in i de uttryck som behöver dem, munnen är en
+båge, ett streck eller en öppen form. Varje uttryck är en uppsättning tal, och rörelse är att talen glider mot
 sina mål. Därför hoppar aldrig ett byte av uttryck, och därför kan en
 blinkning lägga sig ovanpå vad som helst.
 
@@ -148,6 +149,13 @@ Orange är en fråga, och ett knack på bordet eller ett tryck på glaset är
 svaret. Färgen glider tillbaka till cyan, raden försvinner och buddyn
 nickar nöjt utan ljud, vad det än var som frågade: Claude, ett möte, en
 påminnelse, backupen eller timern.
+
+## Klappa den
+
+Ett tryck på glaset eller ett knack på bordet är en klapp. Den första får
+buddyn att titta upp mot handen med stora pupiller, den andra får den att
+le, och från den tredje i följd blundar den nöjt och rodnar. Följden bryts
+efter ett par sekunder. Är buddyn orange kvitterar klappen i stället.
 
 ## Svep på glaset
 
