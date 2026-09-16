@@ -231,9 +231,12 @@ Notiscentralen på Macen ser allt som ger en notis. Länktjänsten läser den
 var åttonde sekund och skickar sms och Teams-meddelanden till kortet: en
 pratbubbla eller en bubbla med T studsar in uppe till höger på glaset,
 ansiktet skiftar till appens färg, blicken går mot ikonen och raden säger
-vem och vad. Mejl får ett kuvert på samma sätt. Det kräver att Python har
-**Full diskåtkomst** i Systeminställningar under Integritet och säkerhet;
-tjänstens logg säger till om åtkomsten saknas. Vilka appar som räknas står
+vem och vad. Mejl får ett kuvert på samma sätt. Läsningen görs av en egen liten
+app, `server/Notiser.app`, som kör som tjänsten `se.critero.office-buddy-notiser`
+och behöver **Full diskåtkomst** i Systeminställningar under Integritet och
+säkerhet (lägg till just den appen; en Python kan inte få rättigheten på
+ett pålitligt sätt). Loggen `~/Library/Logs/office-buddy-notiser.log` säger
+till om åtkomsten saknas. Vilka appar som räknas står
 i `notiser` i `server/buddy.json`.
 
 ## Hemma och borta

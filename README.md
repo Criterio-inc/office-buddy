@@ -38,7 +38,7 @@ are in Swedish; the protocol keywords are too. That is part of its charm.*
 | Meeting in 10 min | orange, "möte om 10 min: title", two-tone; jingle when it starts |
 | Reminder due | orange for 30 s, "påminnelse: title", a blip |
 | New mail | an envelope bounces in, the account's colour, "nytt mejl: sender, subject", no sound |
-| SMS or Teams message | a speech bubble bounces in, the app's colour, a blip (reads Notification Center; needs Full Disk Access) |
+| SMS or Teams message | a speech bubble bounces in, the app's colour, a blip (`server/Notiser.app` reads Notification Center; grant it Full Disk Access) |
 | Screen locked / unlocked | sleeps when you lock the Mac, wakes and looks at you when you unlock |
 | Nightly backup missing | orange, worried, "backup saknas" (optional, reads your own status files) |
 | Timer done | orange, "tiden är ute", jingle |
