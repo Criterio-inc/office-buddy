@@ -182,6 +182,14 @@ bool protokoll_rad(const char *inrad, char *svar, size_t storlek)
         snprintf(svar, storlek, "ob ok claude %s %s, %d väntar", ord, id[0] ? id : "0", humor_claude_vantande());
         return true;
     }
+    if (borjar_med(rad, "scen", &rest)) {
+        if      (strcmp(rest, "start") == 0) ansikte_startsekvens();
+        else if (strcmp(rest, "drom") == 0)  ansikte_dromma(3500);
+        else if (strcmp(rest, "leka") == 0)  { ansikte_tillfalligt(UTTRYCK_NYFIKEN, 5500); ansikte_leka(6000); }
+        else { snprintf(svar, storlek, "ob fel scen: start, drom eller leka"); return false; }
+        snprintf(svar, storlek, "ob ok scen %s", rest);
+        return true;
+    }
     if (borjar_med(rad, "spela", &rest)) {
         static const char *const LJUD[LJUD_ANTAL] = { "blipp", "lyft", "glad", "trudelutt" };
         for (int i = 0; i < LJUD_ANTAL; i++) {

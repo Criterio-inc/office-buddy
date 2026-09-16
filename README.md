@@ -47,6 +47,9 @@ are in Swedish; the protocol keywords are too. That is part of its charm.*
 | Lift the board | surprised; wakes it up if asleep |
 | Computer asleep | the buddy sleeps too; wakes with a jingle when you are back |
 | Side buttons | volume down (BOOT) and up (power key), remembered across reboots |
+| Boot | "Power up" in text, two blocks that grow into eyes, a jingle |
+| Asleep | eyes become soft waves; a few times a night it dreams in colourful TV static |
+| Nothing for 20 min | sometimes a fly buzzes across the glass and the gaze follows it out |
 
 Orange means exactly one thing: *something needs you now*. Nothing else may
 use it.

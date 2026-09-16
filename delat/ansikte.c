@@ -172,7 +172,9 @@ static const param_t UTTRYCK[UTTRYCK_ANTAL] = {
                                .mun = { .w = 56, .kurva = 0.8f } },
     [UTTRYCK_OVERVALDIGAD] = { BADA(OGA(.w = 84, .h = 84, .r = 1, .oppen = 1, .form = 2, .pupill = 0)),
                                .mun = { .w = 50, .vag = 0.8f }, .darr = 0.6f },
-    [UTTRYCK_SOVER]        = { BADA(OGA(OGA_STD, .glad = 1)),
+    [UTTRYCK_START]        = { BADA(OGA(.w = 62, .h = 46, .r = 0.08f, .oppen = 1, .pupill = 0)),
+                               .mun = { .w = 0 } },
+    [UTTRYCK_SOVER]        = { BADA(OGA(OGA_STD, .form = 3, .pupill = 0)),
                                .mun = { .w = 22, .kurva = 0.2f }, .blick_y = 0.15f },
 };
 
@@ -187,6 +189,7 @@ static const char *const NAMN[UTTRYCK_ANTAL] = {
     [UTTRYCK_GASPAR] = "gäspar",           [UTTRYCK_STRESSAD] = "stressad",
     [UTTRYCK_NYFIKEN] = "nyfiken",         [UTTRYCK_KAR] = "kär",
     [UTTRYCK_OVERVALDIGAD] = "överväldigad", [UTTRYCK_SOVER] = "sover",
+    [UTTRYCK_START] = "start",
 };
 
 /* ---- Tillståndet ------------------------------------------------------- */
@@ -225,6 +228,20 @@ static int32_t sackad_kvar_ms;
 /* Kvicka övergångar en kort stund efter ett byte, så reaktioner känns snabba. */
 static int32_t snabb_kvar_ms;
 static int32_t rodnad_kvar_ms;
+
+/* Startsekvensen. */
+static int32_t   start_kvar_ms;
+static uttryck_t start_aterga;
+
+/* Drömmen: brus över glaset. */
+static int32_t  drom_kvar_ms;
+static uint32_t drom_fro;
+static int32_t  drom_byt_ms;
+static bool     drom_nyss;
+
+/* Flugan. */
+static int32_t leka_kvar_ms;
+static float   fluga_x, fluga_y, fluga_vx, fluga_vy;
 
 /* Andningen. */
 static float   andning_fas;
@@ -380,6 +397,17 @@ static void rita_oga(lv_layer_t *l, const oga_t *o, float cx, float cy, bool hog
     float w = o->w;
     float h = o->h * begransa(o->oppen * oppen_extra, 0.05f, 1);
 
+    if (o->form > 2.5f) {
+        /* Sovande: en mjuk våg där ögat var, som i förlagan. */
+        lv_point_precise_t p[15];
+        for (int i = 0; i < 15; i++) {
+            float t = (float)i / 14.0f;
+            p[i].x = (lv_value_precise_t)lroundf(cx - w * 0.42f + w * 0.84f * t);
+            p[i].y = (lv_value_precise_t)lroundf(cy + sinf(t * 2 * (float)M_PI) * o->h * 0.07f);
+        }
+        rita_linje(l, p, 15, (int32_t)(8 * SKALA), farg(FARG_OGA));
+        return;
+    }
     if (o->form > 1.5f) { rita_spiral(l, cx, cy, w, snurr); return; }
     if (o->form > 0.5f) { rita_hjarta(l, cx, cy, w, h);     return; }
 
@@ -483,6 +511,7 @@ static void rita_oga(lv_layer_t *l, const oga_t *o, float cx, float cy, bool hog
 static void rita_mun(lv_layer_t *l, const mun_t *m, float cx, float cy)
 {
     float w = m->w, h = m->h;
+    if (w < 2) return;
     int32_t tjock = (int32_t)(9 * SKALA);
 
     if (h > 5) {
@@ -558,6 +587,12 @@ static void rutan(lv_area_t *ut)
     float ovx, ovy, ohx, ohy, mx, my, and;
     lagen(&ovx, &ovy, &ohx, &ohy, &mx, &my, &and);
 
+    if (drom_kvar_ms > 0 || drom_nyss || start_kvar_ms > 0) {
+        ut->x1 = 0; ut->y1 = 0; ut->x2 = ANSIKTE_BREDD - 1; ut->y2 = ANSIKTE_HOJD - 1;
+        drom_nyss = false;
+        return;
+    }
+
     lv_area_t a;
     float m = 14;
     float vw = nu.v.w * SKALA, vh = nu.v.h * SKALA, hw = nu.h.w * SKALA, hh = nu.h.h * SKALA;
@@ -567,9 +602,40 @@ static void rutan(lv_area_t *ut)
     area_satt(&a, ohx - hw / 2 - m, ohy - hh / 2 - m - bh, ohx + hw / 2 + m, ohy + hh / 2 + m);
     area_utvidga(ut, &a);
     if (nu.rodnad > 0.01f) { ut->y2 += (int32_t)(vh * 0.3f); }
+    if (leka_kvar_ms > 0) {
+        area_satt(&a, fluga_x - 18, fluga_y - 16, fluga_x + 18, fluga_y + 14);
+        area_utvidga(ut, &a);
+    }
     float mh = fmaxf(mhj * 1.6f, mw * 0.5f) + m;
     area_satt(&a, mx - mw / 2 - m, my - mh, mx + mw / 2 + m, my + mh);
     area_utvidga(ut, &a);
+}
+
+/* Ett enkelt, snabbt slumptal ur ett frö. Samma frö ger samma brus. */
+static uint32_t brus(uint32_t *fro)
+{
+    *fro = *fro * 1664525u + 1013904223u;
+    return *fro >> 8;
+}
+
+static void rita_drom(lv_layer_t *l)
+{
+    static const uint32_t TONER[] = { 0x1A1A1A, 0x3A3A3A, 0x6A6A6A, 0xA8A8A8, 0xE0E0E0,
+                                      0x3B7257, 0xF29AA6, 0xB79CFF, 0x5A6FA8 };
+    const int cell = 16;
+    uint32_t fro = drom_fro;
+    lv_draw_rect_dsc_t d;
+    lv_draw_rect_dsc_init(&d);
+    d.bg_opa = LV_OPA_COVER;
+    for (int y = 0; y < ANSIKTE_HOJD; y += cell) {
+        for (int x = 0; x < ANSIKTE_BREDD; x += cell) {
+            uint32_t r = brus(&fro);
+            int i = (r & 0x1F) < 24 ? (int)(r % 5) : 5 + (int)((r >> 5) % 4);
+            d.bg_color = lv_color_hex(TONER[i]);
+            lv_area_t a = { x, y, x + cell - 1, y + cell - 1 };
+            lv_draw_rect(l, &d, &a);
+        }
+    }
 }
 
 static void rita(lv_event_t *e)
@@ -577,6 +643,9 @@ static void rita(lv_event_t *e)
     lv_layer_t *l = lv_event_get_layer(e);
     float ovx, ovy, ohx, ohy, mx, my, and;
     lagen(&ovx, &ovy, &ohx, &ohy, &mx, &my, &and);
+
+    if (drom_kvar_ms > 0) { rita_drom(l); return; }
+    if (start_kvar_ms > 1100) return;   /* bara texten syns i början av starten */
 
     /* Andningen gör ögonen aningen högre när den andas in. */
     float andas_extra = 1 + and * 0.02f;
@@ -603,6 +672,21 @@ static void rita(lv_event_t *e)
         rita_rekt(l, &ra, FARG_RODNAD, (lv_opa_t)(nu.rodnad * 200), LV_RADIUS_CIRCLE);
     }
     rita_mun(l, &mun, mx, my);
+
+    /* Flugan: en liten prick med två vingstreck. */
+    if (leka_kvar_ms > 0) {
+        lv_area_t fa;
+        area_satt(&fa, fluga_x - 7, fluga_y - 6, fluga_x + 7, fluga_y + 6);
+        rita_rekt(l, &fa, FARG_PUPILL, LV_OPA_COVER, LV_RADIUS_CIRCLE);
+        area_satt(&fa, fluga_x - 5, fluga_y - 4, fluga_x + 5, fluga_y + 4);
+        rita_rekt(l, &fa, farg(FARG_OGA), LV_OPA_COVER, LV_RADIUS_CIRCLE);
+        float vt = (float)((lv_tick_get() / 40) % 2) * 4 - 2;
+        lv_point_precise_t p[2] = {
+            { (lv_value_precise_t)lroundf(fluga_x - 12), (lv_value_precise_t)lroundf(fluga_y - 8 + vt) },
+            { (lv_value_precise_t)lroundf(fluga_x + 12), (lv_value_precise_t)lroundf(fluga_y - 8 - vt) },
+        };
+        rita_linje(l, p, 2, 3, farg(FARG_BRYN));
+    }
 }
 
 /* ---- Livet ------------------------------------------------------------- */
@@ -722,6 +806,45 @@ static void tick(lv_timer_t *t)
         if (fabsf(replik_opa - forr) > 0.002f) {
             lv_obj_set_style_text_opa(replik, (lv_opa_t)(replik_opa * 255), LV_PART_MAIN);
         }
+    }
+
+    /* Drömmen: bruset byter bild var 80:e millisekund. */
+    if (drom_kvar_ms > 0) {
+        drom_kvar_ms -= dt;
+        drom_byt_ms -= dt;
+        if (drom_byt_ms <= 0) { drom_fro = (uint32_t)lv_rand(1, 0x7FFFFFFF); drom_byt_ms = 80; }
+        if (drom_kvar_ms <= 0) drom_nyss = true;
+    }
+
+    /* Startsekvensen: text, sedan block, sedan det vanliga ansiktet. */
+    if (start_kvar_ms > 0) {
+        int32_t forr = start_kvar_ms;
+        start_kvar_ms -= dt;
+        if (forr > 2400 && start_kvar_ms <= 2400) ansikte_sag("Power |", 600);
+        if (forr > 1800 && start_kvar_ms <= 1800) ansikte_sag("Power up", 700);
+        if (forr > 1100 && start_kvar_ms <= 1100) { mal = UTTRYCK[UTTRYCK_START]; nu = mal; nu.v.h = 4; nu.h.h = 4; snabb_kvar_ms = 600; }
+        if (start_kvar_ms <= 0) { ansikte_satt_uttryck(start_aterga); ansikte_blinka(); }
+    }
+
+    /* Flugan surrar omkring och blicken hänger med. */
+    if (leka_kvar_ms > 0) {
+        leka_kvar_ms -= dt;
+        fluga_vx += slump(-1.2f, 1.2f) * steg;
+        fluga_vy += slump(-1.2f, 1.2f) * steg;
+        fluga_vx = begransa(fluga_vx * 0.94f, -5, 5);
+        fluga_vy = begransa(fluga_vy * 0.94f, -5, 5);
+        if (leka_kvar_ms < 900) { fluga_vx += 1.2f * steg; fluga_vy -= 0.8f * steg; }   /* flyger ut */
+        fluga_x += fluga_vx * steg;
+        fluga_y += fluga_vy * steg;
+        if (leka_kvar_ms >= 900) {
+            if (fluga_x < 30) { fluga_x = 30; fluga_vx = fabsf(fluga_vx); }
+            if (fluga_x > ANSIKTE_BREDD - 30) { fluga_x = ANSIKTE_BREDD - 30; fluga_vx = -fabsf(fluga_vx); }
+            if (fluga_y < 30) { fluga_y = 30; fluga_vy = fabsf(fluga_vy); }
+            if (fluga_y > ANSIKTE_HOJD - 60) { fluga_y = ANSIKTE_HOJD - 60; fluga_vy = -fabsf(fluga_vy); }
+        }
+        blick_mal_x = begransa((fluga_x - ANSIKTE_BREDD / 2) / (ANSIKTE_BREDD / 2), -1, 1);
+        blick_mal_y = begransa((fluga_y - OGA_CY) / (ANSIKTE_HOJD / 2), -1, 1);
+        blick_lasta_ms = 300;
     }
 
     /* 4. Rita om bara det som rört sig: förra rutan och den nya. */
@@ -886,6 +1009,28 @@ void ansikte_petad(void)
 {
     ansikte_tillfalligt(UTTRYCK_FORVANAD, 1100);
     ansikte_blinka();
+}
+
+void ansikte_startsekvens(void)
+{
+    start_aterga = uttryck_nu;
+    start_kvar_ms = 3000;
+    ansikte_sag("Pd", 600);
+}
+
+void ansikte_dromma(int32_t ms)
+{
+    drom_kvar_ms = ms;
+    drom_byt_ms = 0;
+}
+
+void ansikte_leka(int32_t ms)
+{
+    leka_kvar_ms = ms;
+    fluga_x = slump(0, 1) < 0.5f ? 24 : ANSIKTE_BREDD - 24;
+    fluga_y = slump(60, 200);
+    fluga_vx = fluga_x < 100 ? 3 : -3;
+    fluga_vy = 1;
 }
 
 void ansikte_rodna(int32_t ms)

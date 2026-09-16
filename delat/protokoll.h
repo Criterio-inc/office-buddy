@@ -18,6 +18,7 @@
  *   ljus <procent>             glasets ljusstyrka
  *   ljud <0|1>                 högtalaren av eller på
  *   spela <blipp|lyft|glad|trudelutt>   ett av ljuden
+ *   scen <start|drom|leka>     kör en av scenerna, för prov
  *   claude <vantar|klar|jobbar> [id] [projekt]   en Claude-session behöver dig, är klar, eller arbetar
  *   backup <ok|saknas [text]>  nattens backup, från datorn en gång per dag
  *   mote <minuter> <rubrik>    ett möte om så många minuter (0 = nu)

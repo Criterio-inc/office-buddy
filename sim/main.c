@@ -366,6 +366,7 @@ int main(int argc, char **argv)
     klocka_start_ms = tick_nu();
     humor_satt_vantande(vantande, roda);
     humor_starta(timme_nu());
+    ansikte_startsekvens();
     if (uttryck != NULL) { humor_pa = false; ansikte_satt_uttryck(uttryck_fran_namn(uttryck)); }
     visa_titel(skarm);
     printf("vänster/höger byter uttryck (stänger av humöret), M slår på humöret, mellanslag neutral\n");

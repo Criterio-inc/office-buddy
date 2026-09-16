@@ -157,6 +157,16 @@ buddyn att titta upp mot handen med stora pupiller, den andra får den att
 le, och från den tredje i följd blundar den nöjt och rodnar. Följden bryts
 efter ett par sekunder. Är buddyn orange kvitterar klappen i stället.
 
+## Fyra små scener
+
+**Starten.** "Pd", "Power |", "Power up" i text, sedan två block som växer
+och blir ögon, som i förlagan. **Sömnen.** Ögonen blir två mjuka vågor, och
+några gånger per natt drömmer buddyn: några sekunders färgat TV-brus över
+hela glaset. **Leken.** Har inget hänt på tjugo minuter händer det ibland
+att en liten fluga surrar in över glaset; blicken följer den tills den
+flyger ut igen. Alla tre går att prova från datorn: `scen start`,
+`scen drom`, `scen leka`.
+
 ## Svep på glaset
 
 Ansiktet är hemma. Ett svep åt vänster ger **klockan**: tiden stor mitt på

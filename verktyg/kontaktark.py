@@ -15,7 +15,7 @@ ROT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SIM = os.path.join(ROT, "sim", "build", "office-buddy-sim")
 UTTRYCK = ["neutral", "glad", "väldigt glad", "förvånad", "entusiastisk", "nöjd",
            "blinkning", "ledsen", "besviken", "orolig", "arg", "fundersam",
-           "trött", "sömnig", "gäspar", "stressad", "nyfiken", "kär", "överväldigad", "sover"]
+           "trött", "sömnig", "gäspar", "stressad", "nyfiken", "kär", "överväldigad", "sover", "start"]
 
 def las_bmp(fil):
     d = open(fil, "rb").read()

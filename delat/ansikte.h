@@ -49,6 +49,7 @@ typedef enum {
     UTTRYCK_KAR,
     UTTRYCK_OVERVALDIGAD,
     UTTRYCK_SOVER,          /* slutna ögon, används av humöret nattetid */
+    UTTRYCK_START,          /* två block, ur startsekvensen */
     UTTRYCK_ANTAL
 } uttryck_t;
 
@@ -107,6 +108,15 @@ void ansikte_rodna(int32_t ms);
 
 /* Tittar upp mot den som klappar, med stora pupiller, en kort stund. */
 void ansikte_klappad(int antal);
+
+/* Startsekvensen: "Power up" i text, två block som blir ögon. Cirka tre sekunder. */
+void ansikte_startsekvens(void);
+
+/* Drömmer: TV-brus över hela glaset i ms millisekunder. Bara i sömnen. */
+void ansikte_dromma(int32_t ms);
+
+/* Leker: en liten fluga surrar över glaset i ms millisekunder och blicken följer den. */
+void ansikte_leka(int32_t ms);
 
 /*
  * Vem som ska få veta när glaset trycks. Utan krok reagerar ansiktet självt

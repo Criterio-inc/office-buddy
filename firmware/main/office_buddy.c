@@ -261,6 +261,7 @@ void app_main(void)
 
     if (bsp_display_lock(0)) {
         humor_starta(timme);
+        ansikte_startsekvens();
         lv_timer_create(humor_klocka, 1000, NULL);
         bsp_display_unlock();
     }

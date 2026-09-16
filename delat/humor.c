@@ -29,6 +29,8 @@ static claude_lage_t claude_lage = CLAUDE_JOBBAR;
 static bool lank_ok = true;
 static int32_t varm_kvar_ms;                 /* tillfällig orange, t.ex. saknad backup */
 static int     klappar;                      /* klappar i följd */
+static int32_t sysslolos_ms;                 /* tid utan händelser, vaken */
+static int32_t drom_kvar_ms;                 /* tills nästa dröm i sömnen */
 static int32_t klapp_kvar_ms;                /* tills följden bryts */
 static bool sov_for_lanken;
 static int32_t claude_paminn_ms;             /* tills nästa lilla blick mot datorn */
@@ -109,6 +111,13 @@ static uttryck_t valj(void)
 static void episod(void)
 {
     float t = slump(0, 1);
+    /* Har inget hänt på länge leker den ibland: en fluga att följa med blicken. */
+    if (sysslolos_ms > 20 * 60000 && t < 0.5f) {
+        ansikte_tillfalligt(UTTRYCK_NYFIKEN, 5500);
+        ansikte_leka(6000);
+        sysslolos_ms = 0;
+        return;
+    }
     if (h.energi < 0.45f && t < 0.35f) {
         ansikte_tillfalligt(UTTRYCK_TROTT, 2500);
         ansikte_titta(0, 0.4f);
@@ -235,8 +244,17 @@ void humor_tick(float timme, int32_t dt_ms)
     /* Morgon och natt får ett ord var. */
     if (h.sover) {
         morgon_sagd = false;
+        sysslolos_ms = 0;
+        /* Drömmar: några sekunders brus, sällan. */
+        drom_kvar_ms -= dt_ms;
+        if (drom_kvar_ms <= 0) {
+            ansikte_dromma((int32_t)slump(2500, 4500));
+            drom_kvar_ms = (int32_t)slump(6 * 60000, 15 * 60000);
+        }
         return;
     }
+    drom_kvar_ms = (int32_t)slump(60000, 180000);
+    sysslolos_ms += dt_ms;
     natt_sagd = false;
     if (!morgon_sagd && h.energi > 0.55f && timme >= 6 && timme < 11) {
         morgon_sagd = true;
@@ -292,6 +310,7 @@ static void kvittera(void)
 
 void humor_handelse(humor_handelse_t e)
 {
+    sysslolos_ms = 0;
     switch (e) {
     case HANDELSE_PETAD:
     case HANDELSE_KNACK:
@@ -383,6 +402,7 @@ static claude_session_t *claude_hitta(const char *id, bool skapa)
 
 void humor_satt_claude(claude_lage_t lage, const char *id, const char *namn)
 {
+    sysslolos_ms = 0;
     if (id == NULL || id[0] == '\0') id = "0";
     if (lage == CLAUDE_JOBBAR) {
         claude_session_t *s = claude_hitta(id, false);
@@ -447,6 +467,7 @@ void humor_satt_lank(bool ok)
 
 void humor_mote(int minuter, const char *rubrik)
 {
+    sysslolos_ms = 0;
     char rad[128];
     if (minuter <= 1) {
         snprintf(rad, sizeof(rad), "möte nu: %s", rubrik ? rubrik : "");
@@ -468,6 +489,7 @@ void humor_mote(int minuter, const char *rubrik)
 
 void humor_paminnelse(const char *text)
 {
+    sysslolos_ms = 0;
     char rad[128];
     snprintf(rad, sizeof(rad), "påminnelse: %s", text ? text : "");
     ansikte_varm(true);
@@ -480,6 +502,7 @@ void humor_paminnelse(const char *text)
 
 void humor_mejl(uint32_t hex, const char *text)
 {
+    sysslolos_ms = 0;
     char rad[128];
     snprintf(rad, sizeof(rad), "nytt mejl: %s", text ? text : "");
     if (hex != 0) ansikte_ton(hex, 8000);
