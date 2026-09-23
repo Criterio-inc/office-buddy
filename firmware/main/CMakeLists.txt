@@ -14,6 +14,7 @@ idf_component_register(
          "knappar.c"
          "${DELAT}/ansikte.c"
          "${DELAT}/humor.c"
+         "${DELAT}/signaler.c"
          "${DELAT}/protokoll.c"
          "${DELAT}/lv_font_replik.c"
          "${DELAT}/lv_font_siffror.c"

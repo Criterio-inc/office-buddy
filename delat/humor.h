@@ -65,7 +65,7 @@ void humor_mote(int minuter, const char *rubrik);
 /* En påminnelse som förfaller: orange en halv minut, texten, ett blipp. */
 void humor_paminnelse(const char *text);
 
-/* Nytt mejl: en blick, en rad och kontots färg en stund. Inget ljud. hex 0 = ingen färg. */
+/* Nytt mejl: en blick, en rad och kontots färg en stund. @-ögon och egen melodi. hex 0 = ingen färg. */
 void humor_mejl(uint32_t hex, const char *text);
 
 /* Ett meddelande: 1 = mejl, 2 = sms, 3 = Teams. Ikon på glaset, en blick, en rad. */
@@ -93,7 +93,7 @@ int humor_claude_vantande(void);
 const humor_t *humor_las(void);
 
 /* Ljud som humöret vill ge ifrån sig. Värden får koppla en krok; utan krok tyst. */
-typedef enum { LJUD_BLIPP, LJUD_LYFT, LJUD_GLAD, LJUD_TRUDELUTT, LJUD_ANTAL } humor_ljud_t;
+typedef enum { LJUD_BLIPP, LJUD_LYFT, LJUD_GLAD, LJUD_TRUDELUTT, LJUD_MEJL, LJUD_CLAUDE, LJUD_CODEX, LJUD_MOTE, LJUD_ANTAL } humor_ljud_t;
 void humor_vid_ljud(void (*krok)(humor_ljud_t));
 
 /* Ber om ett ljud utifrån, t.ex. från protokollet. Tyst utan krok. */

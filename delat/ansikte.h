@@ -57,6 +57,10 @@ typedef enum {
  * Anropas en gång, under LVGL-låset på kortet. */
 void ansikte_bygg(void);
 
+/* Händelsescen: 1 mejl, 2 Claude, 3 Codex, 4 möte, 5 klart. 0 avslutar. */
+void ansikte_signal(int typ, int32_t ms);
+int ansikte_signal_typ(void);
+
 /* Byter grunduttryck. Övergången sker mjukt under ungefär en halv sekund. */
 void ansikte_satt_uttryck(uttryck_t u);
 uttryck_t ansikte_uttryck(void);
@@ -138,3 +142,7 @@ void ansikte_vid_petning(void (*krok)(void));
  * blicken där ett par sekunder innan det egna vandrandet tar över igen.
  */
 void ansikte_titta(float x, float y);
+
+/* Aktörens logga även vid ett avslutat arbete: 2 Claude, 3 Codex. */
+void ansikte_agentlogga(int aktor);
+int ansikte_agentlogga_typ(void);

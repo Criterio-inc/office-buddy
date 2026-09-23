@@ -23,10 +23,24 @@ if [[ "$1" == "bort" ]]; then
   exit 0
 fi
 
-# Notisläsaren: egen tjänst med eget namn, så att Full diskåtkomst ges till
-# just den filen. Byggs ur notiser.swift om den saknas.
-if [[ ! -x "$HAR/notiser" ]]; then
-  swiftc -O "$HAR/notiser.swift" -o "$HAR/notiser"
+# Bygg den app som launchd faktiskt kör, inte en oanvänd fil bredvid.
+NOTIS_APP="$HAR/Notiser.app"
+NOTIS_BIN="$NOTIS_APP/Contents/MacOS/notiser"
+if [[ ! -x "$NOTIS_BIN" || "$HAR/notiser.swift" -nt "$NOTIS_BIN" ]]; then
+  mkdir -p "$NOTIS_APP/Contents/MacOS"
+  "$PYTHON" - "$NOTIS_APP/Contents/Info.plist" <<'PLISTPY'
+import plistlib, sys
+from pathlib import Path
+p = Path(sys.argv[1])
+if not p.exists():
+    p.write_bytes(plistlib.dumps({"CFBundleIdentifier": "se.critero.office-buddy.notiser",
+        "CFBundleName": "Office Buddy Notiser", "CFBundleExecutable": "notiser",
+        "CFBundlePackageType": "APPL", "CFBundleVersion": "1",
+        "CFBundleShortVersionString": "1.0", "LSUIElement": True}))
+PLISTPY
+  swiftc -O "$HAR/notiser.swift" -o "$NOTIS_BIN"
+  codesign --force --sign - --identifier se.critero.office-buddy.notiser "$NOTIS_APP"
+  echo "Uppdaterad notisläsare: macOS kan kräva nytt godkännande av Full diskåtkomst."
 fi
 
 mkdir -p "$HOME/Library/LaunchAgents" "$HOME/Library/Logs"

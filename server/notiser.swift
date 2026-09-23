@@ -12,7 +12,10 @@ import SQLite3
 
 let db_sokvag = NSString(string: "~/Library/Group Containers/group.com.apple.usernoted/db2/db").expandingTildeInPath
 let brevlada = URL(string: "http://127.0.0.1:8739/")!
-let har = URL(fileURLWithPath: CommandLine.arguments[0]).deletingLastPathComponent()
+let bin = URL(fileURLWithPath: CommandLine.arguments[0]).standardizedFileURL
+let har = bin.path.contains("/Notiser.app/Contents/MacOS/")
+    ? bin.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+    : bin.deletingLastPathComponent()
 let enGang = CommandLine.arguments.contains("--en-gang")
 
 func logg(_ t: String) {
@@ -30,14 +33,20 @@ if let d = try? Data(contentsOf: har.appendingPathComponent("buddy.json")),
    let j = try? JSONSerialization.jsonObject(with: d) as? [String: Any],
    let n = j["notiser"] as? [String: [String]] { karta = n }
 
-func skicka(_ rad: String) {
-    var req = URLRequest(url: brevlada); req.httpMethod = "POST"; req.httpBody = rad.data(using: .utf8)
+func skicka(_ rad: String) -> Bool {
+    let ren = rad.components(separatedBy: .newlines).joined(separator: " ")
+    var req = URLRequest(url: brevlada); req.httpMethod = "POST"
+    req.timeoutInterval = 2; req.httpBody = ren.data(using: .utf8)
     let sem = DispatchSemaphore(value: 0)
-    URLSession.shared.dataTask(with: req) { _, _, fel in
-        if let fel = fel { logg("brevlådan svarar inte: \(fel.localizedDescription)") } else { logg("→ \(rad)") }
+    final class Resultat: @unchecked Sendable { var ok = false }
+    let resultat = Resultat()
+    let task = URLSession.shared.dataTask(with: req) { _, response, fel in
+        resultat.ok = fel == nil && (response as? HTTPURLResponse)?.statusCode == 200
         sem.signal()
-    }.resume()
-    _ = sem.wait(timeout: .now() + 3)
+    }
+    task.resume()
+    guard sem.wait(timeout: .now() + 3) == .success else { task.cancel(); return false }
+    return resultat.ok
 }
 
 /* Letar efter en strängnyckel var som helst i en tolkad plist. */
@@ -51,9 +60,9 @@ func leta(_ v: Any, _ nyckel: String) -> String? {
     return nil
 }
 
-func oppna() -> OpaquePointer? {
+func oppna(_ path: String = db_sokvag) -> OpaquePointer? {
     var db: OpaquePointer?
-    let uri = "file:\(db_sokvag)?mode=ro&immutable=1"
+    let uri = "file:\(path)?mode=ro"
     if sqlite3_open_v2(uri, &db, SQLITE_OPEN_READONLY | SQLITE_OPEN_URI, nil) != SQLITE_OK {
         if db != nil { sqlite3_close(db) }
         return nil
@@ -71,7 +80,7 @@ struct Post { let id: Int64; let app: String; let text: String }
 
 func nya(_ db: OpaquePointer, efter: Int64, max: Int) -> [Post] {
     var st: OpaquePointer?
-    let sql = "select r.rec_id, a.identifier, r.data from record r join app a on a.app_id = r.app_id where r.rec_id > ? order by r.rec_id desc limit ?"
+    let sql = "select r.rec_id, a.identifier, r.data from record r join app a on a.app_id = r.app_id where r.rec_id > ? order by r.rec_id asc limit ?"
     guard sqlite3_prepare_v2(db, sql, -1, &st, nil) == SQLITE_OK else { return [] }
     sqlite3_bind_int64(st, 1, efter); sqlite3_bind_int(st, 2, Int32(max))
     var ut: [Post] = []
@@ -92,13 +101,26 @@ func nya(_ db: OpaquePointer, efter: Int64, max: Int) -> [Post] {
         ut.append(Post(id: id, app: app, text: text))
     }
     sqlite3_finalize(st)
-    return ut.reversed()
+    return ut
 }
 
 func maxId(_ db: OpaquePointer) -> Int64 {
     var st: OpaquePointer?; var m: Int64 = 0
     if sqlite3_prepare_v2(db, "select max(rec_id) from record", -1, &st, nil) == SQLITE_OK, sqlite3_step(st) == SQLITE_ROW { m = sqlite3_column_int64(st, 0) }
     sqlite3_finalize(st); return m
+}
+
+if CommandLine.arguments.contains("--diagnostik") {
+    guard let db = oppna() else { logg("ingen åtkomst till notiscentralen"); exit(2) }
+    logg("läsbar, senaste rec_id \(maxId(db))")
+    var st: OpaquePointer?
+    if sqlite3_prepare_v2(db, "select a.identifier, max(r.rec_id) from record r join app a on a.app_id=r.app_id group by a.identifier", -1, &st, nil) == SQLITE_OK {
+        while sqlite3_step(st) == SQLITE_ROW {
+            let app = sqlite3_column_text(st, 0).map { String(cString: $0) } ?? ""
+            print("\(app): \(sqlite3_column_int64(st, 1))")
+        }
+    }
+    sqlite3_finalize(st); sqlite3_close(db); exit(0)
 }
 
 if enGang {
@@ -110,25 +132,43 @@ if enGang {
 
 var sista: Int64 = -1
 var klagat = false
+var ko: [String: (rad: String, skapad: Date)] = [:]
 var tystTill: [String: Date] = [:]
+var nastaStatus = Date.distantPast
 logg("notiser startar, lyssnar efter \(karta.keys.sorted().joined(separator: ", "))")
 while true {
     if let db = oppna() {
-        if sista < 0 { sista = maxId(db); logg("läsbar, börjar vid rec_id \(sista)"); klagat = false }
-        else {
-            for p in nya(db, efter: sista, max: 20) {
+        let maxid = maxId(db)
+        if sista < 0 || maxid < sista {
+            sista = maxid; logg("läsbar, börjar vid rec_id \(sista)")
+        } else {
+            for p in nya(db, efter: sista, max: 200) {
                 sista = max(sista, p.id)
                 guard let tf = karta[p.app], let typ = tf.first else { continue }
-                if let t = tystTill[typ], t > Date() { continue }
                 let farg = tf.count > 1 ? tf[1] + " " : ""
-                skicka("\(typ) \(farg)\(String(p.text.prefix(80)))")
-                tystTill[typ] = Date().addingTimeInterval(20)
+                ko[typ] = ("\(typ) \(farg)\(String(p.text.prefix(80)))", Date())
+                logg("ny notis: \(typ), id \(p.id)")
             }
+        }
+        klagat = false
+        if Date() >= nastaStatus {
+            logg("status: läsbar, senast \(sista), kö \(ko.count)")
+            nastaStatus = Date().addingTimeInterval(300)
         }
         sqlite3_close(db)
     } else if !klagat {
-        logg("ingen åtkomst till notiscentralen: ge \(CommandLine.arguments[0]) Full diskåtkomst i Systeminställningar")
+        logg("ingen åtkomst till notiscentralen: ge Office Buddy Notiser Full diskåtkomst i Systeminställningar")
         klagat = true
     }
-    sleep(8)
+    for typ in Array(ko.keys) {
+        guard let post = ko[typ] else { continue }
+        if Date().timeIntervalSince(post.skapad) > 120 { ko.removeValue(forKey: typ); logg("för gammal notis: \(typ)"); continue }
+        if let t = tystTill[typ], t > Date() { continue }
+        if skicka(post.rad) {
+            ko.removeValue(forKey: typ)
+            tystTill[typ] = Date().addingTimeInterval(5)
+            logg("levererad: \(typ)")
+        } else { logg("leverans misslyckades: \(typ), försöker igen") }
+    }
+    sleep(2)
 }

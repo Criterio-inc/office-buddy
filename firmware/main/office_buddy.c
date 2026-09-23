@@ -213,11 +213,16 @@ void app_main(void)
      * ("Failed to allocate priv TX buffer"). Då tappas rader på glaset,
      * LVGL väntar för evigt på överföringen och vakthunden startar om kortet.
      * Bufferten tas här, först av alla, så att den alltid finns.
+     *
+     * Dubbel buffert: med en enda väntar LVGL i en snurra på CPU 0 medan
+     * varje remsa går ut över SPI. Då äter scenerna (mejlets @, klar-loggan)
+     * hela kärnan, idle-uppgiften svälter och vakthunden larmar var femte
+     * sekund. Med två ritas nästa remsa medan den förra skickas.
      */
     bsp_display_cfg_t cfg = {
         .lvgl_port_cfg = ESP_LVGL_PORT_INIT_CONFIG(),
         .buffer_size   = BSP_LCD_H_RES * 24,
-        .double_buffer = false,
+        .double_buffer = true,
         .flags = { .buff_dma = true, .buff_spiram = false },
     };
     cfg.lvgl_port_cfg.task_stack = 16384;

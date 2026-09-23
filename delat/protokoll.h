@@ -5,6 +5,9 @@
  * Svaren börjar alltid med "ob " så att datorn kan skilja dem från kortets
  * vanliga logg, som går på samma USB-ström.
  *
+ *   agent <claude|codex> <vantar|klar|jobbar|borta> <id> [projekt]
+ *                              vantar kräver en riktig fråga; borta är inte ett godkännande
+ *   tysta                      tystar visningen från datorn, svarar aldrig agenten
  *   hej                        ob hej office-buddy <uttryck>
  *   status                     ob status energi … glädje … oro … <ord> <uttryck>
  *   tid <epok> [förskjutning]  ställer klockan: unix-tid i UTC, och datorns

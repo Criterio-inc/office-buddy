@@ -28,5 +28,10 @@
     "födelsedag"
   ],
   "mote_varna_min": 10,
-  "paminnelser": true
+  "paminnelser": true,
+  "agentstatus_url": "http://127.0.0.1:8737/api/agent-status",
+  "agentstatus_aktorer": [
+    "codex"
+  ],
+  "agentstatus_kommentar": "Läser VibePulse v2. Codex bevakas här; Claude använder befintliga krokar. Lägg till claude bara om dess krokar stängs av. Tom URL stänger bryggan."
 }

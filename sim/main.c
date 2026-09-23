@@ -44,6 +44,8 @@
 #include "ansikte.h"
 #include "humor.h"
 #include "protokoll.h"
+#include "kontroll.h"
+static bool kontroll;
 #include "vyer.h"
 #include <sys/select.h>
 #include <unistd.h>
@@ -250,6 +252,7 @@ static int bildlage(const char *bildfil, const char *serie, const char *dag, int
     vyer_bygg();
     vyer_satt_tid_krok(tid_till_vyer);
     humor_satt_vantande(vantande, roda);
+    if (kontroll) return kontroll_signaler(skarm, simulera);
     char namn[512];
 
     /* Dygnet: en bild per timme, med humöret startat på nytt vid varje. */
@@ -319,7 +322,8 @@ int main(int argc, char **argv)
     bool blink = false;
 
     for (int i = 1; i < argc; i++) {
-        if      (strcmp(argv[i], "--bild") == 0    && i + 1 < argc) bildfil = argv[++i];
+        if      (strcmp(argv[i], "--kontroll") == 0) { kontroll = true; bildfil = ""; }
+        else if (strcmp(argv[i], "--bild") == 0    && i + 1 < argc) bildfil = argv[++i];
         else if (strcmp(argv[i], "--serie") == 0   && i + 1 < argc) serie   = argv[++i];
         else if (strcmp(argv[i], "--uttryck") == 0 && i + 1 < argc) uttryck = argv[++i];
         else if (strcmp(argv[i], "--antal") == 0   && i + 1 < argc) antal   = atoi(argv[++i]);

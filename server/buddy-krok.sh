@@ -6,6 +6,9 @@ EXTRA=$(python3 -c '
 import json,sys,os
 try:
     d=json.load(sys.stdin)
+    if d.get("hook_event_name") == "Notification" and d.get("notification_type") not in ("permission_prompt", "elicitation_dialog"):
+        print("IGNORERA")
+        sys.exit(0)
     sid=str(d.get("session_id",""))[:8] or "0"
     cwd=d.get("cwd","") or ""
     namn=os.path.basename(cwd.rstrip("/")) or "claude"
@@ -13,6 +16,7 @@ try:
 except Exception:
     print("0 claude")
 ' 2>/dev/null)
+[[ "$EXTRA" == "IGNORERA" ]] && exit 0
 [[ -z "$EXTRA" ]] && EXTRA="0 claude"
 curl -s -m 1 -X POST --data-binary "$* $EXTRA" http://127.0.0.1:8739/ >/dev/null 2>&1
 exit 0

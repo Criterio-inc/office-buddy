@@ -25,3 +25,6 @@ server/buddy.json
 
 server/notiser
 server/Notiser.app
+
+# macOS
+.DS_Store

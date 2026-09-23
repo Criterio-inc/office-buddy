@@ -32,3 +32,6 @@ CONFIG_ESP_TASK_WDT_CHECK_IDLE_TASK_CPU1=y
 
 # Konsolen går över USB-Serial/JTAG, samma ström som datorn skickar rader på.
 CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
+
+# 240 MHz: vid 160 räckte inte kärnan till ansiktets scener (LVGL svälte idle på CPU 0).
+CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_240=y

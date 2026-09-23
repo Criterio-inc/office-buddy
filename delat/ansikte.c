@@ -22,6 +22,7 @@
 #include <string.h>
 
 #include "ansikte.h"
+#include "agentloggor.h"
 
 /* ---- Färger ------------------------------------------------------------ */
 
@@ -75,15 +76,15 @@ LV_FONT_DECLARE(lv_font_replik);
 
 /*
  * Uttrycken är ritade i en mindre skala och förstoras här, så att talen i
- * tabellen är hanterliga. 1,4 fyller glaset utan att ögonen når kanterna.
+ * tabellen är hanterliga. 1,2 lämnar luft runt det samlade ansiktet.
  */
-#define SKALA      1.4f
+#define SKALA      1.2f
 
-#define OGA_CX_V    92.0f
-#define OGA_CX_H   276.0f
-#define OGA_CY     174.0f
+#define OGA_CX_V   123.0f
+#define OGA_CX_H   245.0f
+#define OGA_CY     200.0f
 #define MUN_CX     184.0f
-#define MUN_CY     344.0f
+#define MUN_CY     284.0f
 
 #define TICK_MS    33
 
@@ -128,21 +129,22 @@ typedef struct {
 
 /* ---- Uttrycken --------------------------------------------------------- */
 
-#define OGA_STD .w = 84, .h = 96, .r = 0.8f, .oppen = 1, .pupill = 0.40f
+#define OGA_STD .w = 84, .h = 92, .r = 1, .oppen = 1, .pupill = 0.58f
 #define OGA(...) { __VA_ARGS__ }
 #define BADA(o)  .v = o, .h = o
 
 static const param_t UTTRYCK[UTTRYCK_ANTAL] = {
-    [UTTRYCK_NEUTRAL]      = { BADA(OGA(OGA_STD)),
-                               .mun = { .w = 52, .kurva = 0.35f } },
-    [UTTRYCK_GLAD]         = { BADA(OGA(OGA_STD, .botten = 0.32f)),
-                               .mun = { .w = 64, .kurva = 0.9f } },
-    [UTTRYCK_VALDIGT_GLAD] = { BADA(OGA(OGA_STD, .glad = 0.72f, .bryn = 1, .bryn_hojd = 0.45f)),
-                               .mun = { .w = 84, .h = 42, .platt = 1 } },
-    [UTTRYCK_FORVANAD]     = { BADA(OGA(.w = 84, .h = 88, .r = 1, .oppen = 1, .bryn = 1, .bryn_hojd = 0.6f, .pupill = 0.3f)),
-                               .mun = { .w = 24, .h = 32 }, .blick_y = -0.1f },
-    [UTTRYCK_ENTUSIASTISK] = { BADA(OGA(OGA_STD, .glad = 0.55f, .botten = 0.1f, .bryn = 1, .bryn_hojd = 0.5f)),
-                               .mun = { .w = 92, .h = 46, .platt = 1 } },
+    [UTTRYCK_NEUTRAL]      = { .v = OGA(OGA_STD),
+                               .h = OGA(.w = 82, .h = 88, .r = 1, .oppen = 1, .pupill = 0.58f),
+                               .mun = { .w = 32, .kurva = 0.55f } },
+    [UTTRYCK_GLAD]         = { BADA(OGA(OGA_STD, .botten = 0.12f)),
+                               .mun = { .w = 42, .kurva = 0.75f } },
+    [UTTRYCK_VALDIGT_GLAD] = { BADA(OGA(OGA_STD, .glad = 0.65f)),
+                               .mun = { .w = 52, .h = 24, .platt = 1 } },
+    [UTTRYCK_FORVANAD]     = { BADA(OGA(.w = 86, .h = 96, .r = 1, .oppen = 1, .pupill = 0.50f)),
+                               .mun = { .w = 14, .h = 18 }, .blick_y = -0.1f },
+    [UTTRYCK_ENTUSIASTISK] = { BADA(OGA(OGA_STD, .glad = 0.55f, .botten = 0.1f)),
+                               .mun = { .w = 58, .h = 28, .platt = 1 } },
     [UTTRYCK_NOJD]         = { BADA(OGA(OGA_STD, .glad = 0.92f)),
                                .mun = { .w = 52, .kurva = 0.6f } },
     [UTTRYCK_BLINKNING]    = { .v = OGA(OGA_STD, .glad = 0.95f), .h = OGA(OGA_STD),
@@ -166,8 +168,8 @@ static const param_t UTTRYCK[UTTRYCK_ANTAL] = {
                                .mun = { .w = 46, .h = 62 } },
     [UTTRYCK_STRESSAD]     = { BADA(OGA(.w = 66, .h = 66, .r = 1, .oppen = 1, .lock = 0.1f, .lutning = -0.3f, .bryn = 1, .bryn_hojd = 0.35f, .bryn_lut = -0.5f, .pupill = 0.22f)),
                                .mun = { .w = 52, .vag = 1 }, .darr = 1 },
-    [UTTRYCK_NYFIKEN]      = { .v = OGA(.w = 96, .h = 106, .r = 0.8f, .oppen = 1, .bryn = 1, .bryn_hojd = 0.55f, .pupill = 0.44f),
-                               .h = OGA(.w = 72, .h = 80, .r = 0.8f, .oppen = 1, .lock = 0.1f, .pupill = 0.4f),
+    [UTTRYCK_NYFIKEN]      = { .v = OGA(.w = 88, .h = 100, .r = 1, .oppen = 1, .bryn = 0.25f, .bryn_hojd = 0.3f, .pupill = 0.58f),
+                               .h = OGA(.w = 80, .h = 88, .r = 1, .oppen = 1, .pupill = 0.58f),
                                .mun = { .w = 30, .kurva = 0.45f }, .blick_x = 0.3f, .blick_y = -0.15f },
     [UTTRYCK_KAR]          = { BADA(OGA(.w = 92, .h = 88, .r = 0.5f, .oppen = 1, .form = 1, .pupill = 0)),
                                .mun = { .w = 56, .kurva = 0.8f } },
@@ -257,6 +259,7 @@ static bool    sover;
 
 static uint32_t forra_tick_ms;
 static lv_area_t forra_yta;    /* det som ritades förra varvet, ska ritas om */
+static bool      forra_hornet; /* något syntes i hörnet förra varvet */
 
 /* ---- Små hjälpare ------------------------------------------------------ */
 
@@ -396,6 +399,77 @@ static void rita_spiral(lv_layer_t *l, float cx, float cy, float w, float snurr)
  * Ett öga. hoger säger vilket, eftersom lockets lutning speglas: det inre
  * hörnet sitter till höger på vänster öga och till vänster på höger öga.
  */
+static int signal_typ;
+static int klar_logga;
+static uttryck_t signal_bas;
+static int32_t signal_kvar, signal_total;
+
+/* Vektorsymboler som förblir läsbara på håll, oberoende av typsnitt. */
+static void symbol(lv_layer_t *l, int typ, float x, float y, float r, lv_color_t f)
+{
+    if (typ == 1) { /* @: yttre båge, inre ring och krok */
+        rita_bage(l, x, y, r, 35, 345, 5, f);
+        rita_bage(l, x, y, r * .46f, 0, 360, 5, f);
+        lv_point_precise_t p[] = {{x+r*.46f,y-r*.46f},{x+r*.46f,y+r*.36f},
+            {x+r*.75f,y+r*.40f},{x+r*.96f,y+r*.12f}};
+        rita_linje(l,p,4,5,f);
+    } else if (typ == 2) { /* frågetecken */
+        rita_bage(l, x, y-r*.35f, r*.56f, 180, 450, 6, f);
+        lv_point_precise_t p[]={{x+r*.56f,y-r*.35f},{x,y+r*.22f},{x,y+r*.40f}};
+        rita_linje(l,p,3,6,f);
+        lv_area_t a; area_satt(&a,x-3,y+r*.75f-3,x+3,y+r*.75f+3);
+        rita_rekt(l,&a,f,LV_OPA_COVER,LV_RADIUS_CIRCLE);
+    } else if (typ == 3) { /* terminalens >_ */
+        lv_point_precise_t p[]={{x-r*.8f,y-r*.5f},{x-r*.25f,y},{x-r*.8f,y+r*.5f}};
+        rita_linje(l,p,3,5,f);
+        lv_point_precise_t q[]={{x,y+r*.5f},{x+r*.7f,y+r*.5f}};
+        rita_linje(l,q,2,5,f);
+    } else if (typ == 4) { /* klocka */
+        rita_bage(l,x,y,r,0,360,4,f);
+        lv_point_precise_t p[]={{x,y-r*.62f},{x,y},{x+r*.46f,y+r*.2f}};
+        rita_linje(l,p,3,4,f);
+    } else if (typ == 6) { /* sms: mörk pratbubbla med tre ljusa prickar */
+        lv_area_t a; area_satt(&a,x-r,y-r*.72f,x+r,y+r*.52f);
+        rita_rekt(l,&a,f,LV_OPA_COVER,(int32_t)(r*.5f));
+        lv_draw_triangle_dsc_t td; lv_draw_triangle_dsc_init(&td);
+        td.color = f; td.opa = LV_OPA_COVER;
+        td.p[0].x = x-r*.62f; td.p[0].y = y+r*.40f;
+        td.p[1].x = x-r*.12f; td.p[1].y = y+r*.40f;
+        td.p[2].x = x-r*.78f; td.p[2].y = y+r*.95f;
+        lv_draw_triangle(l,&td);
+        float pr = fmaxf(3, r*.13f);
+        for (int i = -1; i <= 1; i++) {
+            lv_area_t pa; area_satt(&pa,x+i*r*.45f-pr,y-r*.10f-pr,x+i*r*.45f+pr,y-r*.10f+pr);
+            rita_rekt(l,&pa,farg(FARG_OGA),LV_OPA_COVER,LV_RADIUS_CIRCLE);
+        }
+    } else if (typ == 7) { /* Teams: ett kraftigt T */
+        lv_point_precise_t p[]={{x-r*.72f,y-r*.62f},{x+r*.72f,y-r*.62f}};
+        lv_point_precise_t q[]={{x,y-r*.62f},{x,y+r*.78f}};
+        rita_linje(l,p,2,7,f); rita_linje(l,q,2,7,f);
+    } else { /* stjärna */
+        lv_point_precise_t p[]={{x-r,y},{x+r,y}}, q[]={{x,y-r},{x,y+r}};
+        rita_linje(l,p,2,3,f); rita_linje(l,q,2,3,f);
+        lv_point_precise_t d[]={{x-r*.55f,y-r*.55f},{x+r*.55f,y+r*.55f}};
+        lv_point_precise_t e[]={{x-r*.55f,y+r*.55f},{x+r*.55f,y-r*.55f}};
+        rita_linje(l,d,2,2,f); rita_linje(l,e,2,2,f);
+    }
+}
+
+/* Samma logga i simulator och på kortet; ögonlocken ritas ovanpå. */
+static void rita_agentlogga(lv_layer_t *l, int typ, float x, float y, float r)
+{
+    lv_draw_image_dsc_t d;
+    lv_draw_image_dsc_init(&d);
+    d.src = typ == 2 ? &logga_claude : &logga_codex;
+    d.recolor = FARG_PUPILL;
+    d.recolor_opa = LV_OPA_COVER;
+    (void)r; /* Inbyggd storlek ger skarpa kanter utan omskalning. */
+    lv_area_t a;
+    a.x1 = (int32_t)lroundf(x) - 32; a.y1 = (int32_t)lroundf(y) - 32;
+    a.x2 = a.x1 + 63; a.y2 = a.y1 + 63;
+    lv_draw_image(l, &d, &a);
+}
+
 static float pup_x, pup_y;   /* pupillernas riktning, -1..1, sätts i rita() */
 
 static void rita_oga(lv_layer_t *l, const oga_t *o, float cx, float cy, bool hoger, float oppen_extra, float snurr)
@@ -430,7 +504,16 @@ static void rita_oga(lv_layer_t *l, const oga_t *o, float cx, float cy, bool hog
      */
     /* Under en glad båge finns inget öga att se pupillen i, så den krymper bort. */
     float pupill = o->pupill * (1 - begransa((o->glad - 0.2f) / 0.3f, 0, 1));
-    if (pupill > 0.02f) {
+    /* Signaltyp → symbol i ögat: mejl @, möte och påminnelse klocka, sms bubbla, Teams T. */
+    int sym = signal_typ == 1 ? 1 : signal_typ == 4 || signal_typ == 9 ? 4
+            : signal_typ == 7 ? 6 : signal_typ == 8 ? 7 : 0;
+    bool tecken = signal_kvar > 0 && !sover &&
+        (sym || signal_typ == 2 || signal_typ == 3 || (signal_typ == 5 && klar_logga && !hoger));
+    if (tecken && h > 30) {
+        if (sym) symbol(l, sym, cx, cy, fminf(w*.32f,h*.35f), FARG_PUPILL);
+        else rita_agentlogga(l, signal_typ == 5 ? klar_logga : signal_typ, cx, cy, fminf(w*.36f,h*.36f));
+    }
+    if (!tecken && pupill > 0.02f) {
         float rp = pupill * w * 0.5f;
         float h_full = o->h;   /* pupillen rör sig i det öppna ögat, inte i det blinkande */
         float pr = fminf(rp, h * 0.48f);
@@ -439,17 +522,23 @@ static void rita_oga(lv_layer_t *l, const oga_t *o, float cx, float cy, bool hog
         if (py - pr < cy - h / 2) py = cy - h / 2 + pr;
         if (py + pr > cy + h / 2) py = cy + h / 2 - pr;
         /* Irisen: en grön ring runt pupillen, sedan pupillen själv. */
-        float ir = pr * 1.55f;
+        float ir = fminf(pr * 1.18f, h * 0.46f);
+        px = begransa(px, cx - w/2 + ir + 2, cx + w/2 - ir - 2);
+        py = begransa(py, cy - h/2 + ir + 1, cy + h/2 - ir - 1);
         lv_area_t ia;
         area_satt(&ia, px - ir, py - ir, px + ir, py + ir);
         rita_rekt(l, &ia, farg(FARG_IRIS), LV_OPA_COVER, LV_RADIUS_CIRCLE);
         lv_area_t pa;
         area_satt(&pa, px - pr, py - pr, px + pr, py + pr);
         rita_rekt(l, &pa, FARG_PUPILL, LV_OPA_COVER, LV_RADIUS_CIRCLE);
-        float gr = fmaxf(2.0f, pr * 0.28f);
+        float gr = fmaxf(2.0f, pr * 0.20f);
         lv_area_t ga;
         area_satt(&ga, px - pr * 0.42f - gr, py - pr * 0.42f - gr, px - pr * 0.42f + gr, py - pr * 0.42f + gr);
         rita_rekt(l, &ga, FARG_GLIMT, LV_OPA_80, LV_RADIUS_CIRCLE);
+        float liten = fmaxf(1.0f, pr * 0.08f);
+        area_satt(&ga, px + pr*.40f - liten, py + pr*.38f - liten,
+                       px + pr*.40f + liten, py + pr*.38f + liten);
+        rita_rekt(l, &ga, FARG_GLIMT, LV_OPA_60, LV_RADIUS_CIRCLE);
     }
 
     /*
@@ -608,17 +697,41 @@ static void rutan(lv_area_t *ut)
     area_satt(&a, ohx - hw / 2 - m, ohy - hh / 2 - m - bh, ohx + hw / 2 + m, ohy + hh / 2 + m);
     area_utvidga(ut, &a);
     if (nu.rodnad > 0.01f) { ut->y2 += (int32_t)(vh * 0.3f); }
+    /* Klar-skuttet lyfter ansiktet den första stunden. Stjärnorna och hörnet
+     * ritas om som egna små rutor i tick(), se ovanfor_ansiktet(). */
+    if (signal_kvar > 0 && signal_typ == 5 && signal_total - signal_kvar < 800) ut->y1 -= 20;
     if (leka_kvar_ms > 0) {
         area_satt(&a, fluga_x - 18, fluga_y - 16, fluga_x + 18, fluga_y + 14);
-        area_utvidga(ut, &a);
-    }
-    if (ikon_kvar_ms > 0) {
-        area_satt(&a, ANSIKTE_BREDD - 64 - 34, 0, ANSIKTE_BREDD - 64 + 34, 46 + 30);
         area_utvidga(ut, &a);
     }
     float mh = fmaxf(mhj * 1.6f, mw * 0.5f) + m;
     area_satt(&a, mx - mw / 2 - m, my - mh, mx + mw / 2 + m, my + mh);
     area_utvidga(ut, &a);
+}
+
+/*
+ * Hörnet uppe till höger (ikonen, möteklockan) ritas om som en egen liten
+ * ruta. Slås det ihop med ansiktets ruta blir föreningen nästan hela skärmen
+ * varje bild, och LVGL-tråden svälter CPU 0 så att vakthunden larmar.
+ */
+static const lv_area_t HORNET = { ANSIKTE_BREDD - 100, 0, ANSIKTE_BREDD - 1, 80 };
+static bool hornet_synligt(void)
+{
+    return ikon_kvar_ms > 0 || (signal_kvar > 0 && signal_typ == 4);
+}
+static bool stjarnor_synliga(void) { return signal_kvar > 0 && signal_typ == 5; }
+static bool forra_stjarnor;
+/* Hörnet och klar-stjärnorna, var för sig, ett varv till efteråt så att tomrummet ritas. */
+static void ovanfor_ansiktet(void)
+{
+    bool hornet = hornet_synligt(), stj = stjarnor_synliga();
+    if (hornet || forra_hornet) { lv_area_t h = HORNET; lv_obj_invalidate_area(yta, &h); }
+    if (stj || forra_stjarnor) {
+        /* En enda låg remsa: varje ruta kostar ett helt varv genom rita(). */
+        lv_area_t a; area_satt(&a, 48 - 9, 38 - 20, 48 + 4 * 67 + 9, 38 + 20);  /* samma lägen som i rita() */
+        lv_obj_invalidate_area(yta, &a);
+    }
+    forra_hornet = hornet; forra_stjarnor = stj;
 }
 
 /* Ett enkelt, snabbt slumptal ur ett frö. Samma frö ger samma brus. */
@@ -661,8 +774,25 @@ static void rita(lv_event_t *e)
     float andas_extra = 1 + and * 0.02f;
     float snurr = (float)((lv_tick_get() / 12) % 360);
 
+    float scen_tid = (float)(signal_total - signal_kvar) / 1000.0f;
+    if (signal_kvar > 0 && signal_typ == 5) {
+        float hopp = scen_tid < .7f ? sinf(scen_tid / .7f * (float)M_PI) * 16 : 0;
+        ovy -= hopp; ohy -= hopp; my -= hopp;
+        for (int i=0; i<5; i++) {
+            float fas = scen_tid*2 + i;
+            symbol(l,5,48+i*67,38+sinf(fas)*10,4+2*sinf(fas),farg(FARG_OGA));
+        }
+    }
+    if (signal_kvar > 0 && signal_typ == 4) {
+        float y = 35 + (scen_tid < .6f ? sinf(scen_tid*10)*8 : 0);
+        symbol(l,4,ANSIKTE_BREDD-62,y,18,farg(FARG_OGA));
+    }
     oga_t v = nu.v, h = nu.h;
     mun_t mun = nu.mun;
+    if (signal_kvar > 0 && signal_typ == 5 && klar_logga) {
+        v.glad = 0; v.botten = 0; v.lock = 0; v.oppen = 1; v.h = 84;
+        my += 18 * SKALA;
+    }
     v.w *= SKALA; v.h *= SKALA;
     h.w *= SKALA; h.h *= SKALA;
     mun.w *= SKALA; mun.h *= SKALA;
@@ -790,6 +920,20 @@ static void tick(lv_timer_t *t)
     if (dt < 1) dt = 1;
     if (dt > 100) dt = 100;
     float steg = (float)dt / TICK_MS;
+    if (signal_kvar > 0) {
+        int32_t fore = signal_kvar;
+        signal_kvar -= dt;
+        /* Överraskningen är en kort upptakt, sedan kommer det vänliga leendet. */
+        if (signal_typ == 1 && signal_total - fore < 450 && signal_total - signal_kvar >= 450) {
+            mal.mun.h = 0; mal.mun.w = 32; mal.mun.kurva = .6f;
+        }
+        if (signal_typ == 1 && fore > 1200 && signal_kvar <= 1200) {
+            /* @ släpper och ansiktet ler före återgången. */
+            signal_typ = 6;
+            ansikte_tillfalligt(UTTRYCK_GLAD, signal_kvar > 0 ? signal_kvar : 1);
+        }
+        if (signal_kvar <= 0) signal_typ = 0;
+    }
 
     /* 1. Uttrycket glider mot sitt mål, kvickt strax efter ett byte. */
     if (snabb_kvar_ms > 0) snabb_kvar_ms -= dt;
@@ -929,6 +1073,7 @@ static void tick(lv_timer_t *t)
     area_utvidga(&bada, &ny);
     forra_yta = ny;
     lv_obj_invalidate_area(yta, &bada);
+    ovanfor_ansiktet();
 }
 
 static void (*petning_krok)(void);
@@ -1042,7 +1187,7 @@ void ansikte_synlig(bool synlig)
 void ansikte_varm(bool varm)
 {
     varm_mal = varm ? 1.0f : 0.0f;
-    varm_auto_ms = varm ? 3000 : 0;
+    varm_auto_ms = 0;
 }
 
 bool ansikte_ar_varm(void)
@@ -1148,3 +1293,26 @@ void ansikte_titta(float x, float y)
     blick_mal_y = begransa(y, -1, 1);
     blick_lasta_ms = 2200;
 }
+
+void ansikte_signal(int typ, int32_t ms)
+{
+    if (typ && !signal_typ) signal_bas = tillfalligt_kvar_ms > 0 ? aterga_till : uttryck_nu;
+    klar_logga = 0;
+    signal_typ = typ; signal_total = signal_kvar = ms;
+    leka_kvar_ms = drom_kvar_ms = start_kvar_ms = ikon_kvar_ms = 0;
+    if (!typ || ms <= 0) { signal_typ = 0; signal_kvar = 0; ansikte_satt_uttryck(sover ? UTTRYCK_SOVER : signal_bas); return; }
+    ansikte_sover(false);
+    ansikte_tillfalligt(typ == 5 ? UTTRYCK_VALDIGT_GLAD : UTTRYCK_FORVANAD, ms);
+    if (typ != 5) {
+        mal.v.bryn = mal.h.bryn = 0;
+        mal.v.pupill = mal.h.pupill = .58f;
+        mal.h.h = 90; /* en liten asymmetri ger ett mjukare uttryck */
+        if (typ != 1) { mal.mun.h = 0; mal.mun.w = 32; mal.mun.kurva = .6f; }
+    }
+    ansikte_titta(0, 0);
+    if (typ == 1) ansikte_ikon(IKON_KUVERT, 0, ms);
+}
+int ansikte_signal_typ(void) { return signal_typ; }
+
+void ansikte_agentlogga(int aktor) { klar_logga = aktor == 2 || aktor == 3 ? aktor : 0; }
+int ansikte_agentlogga_typ(void) { return signal_kvar > 0 ? (signal_typ == 5 ? klar_logga : (signal_typ == 2 || signal_typ == 3 ? signal_typ : 0)) : 0; }

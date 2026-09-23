@@ -7,6 +7,7 @@
 #include "humor.h"
 #include "protokoll.h"
 #include "vyer.h"
+#include "signaler.h"
 
 static protokoll_krokar_t krokar;
 
@@ -55,13 +56,26 @@ bool protokoll_rad(const char *inrad, char *svar, size_t storlek)
 
     if (rad[0] == '\0') { snprintf(svar, storlek, "ob fel tom rad"); return false; }
 
+    if (strcmp(rad, "tysta") == 0) {
+        signaler_kvittera(); snprintf(svar, storlek, "ob ok tysta"); return true;
+    }
+    if (borjar_med(rad, "agent", &rest)) {
+        char aktor[8], lage[12], id[65], projekt[100] = "";
+        if (sscanf(rest, "%7s %11s %64s %99[^\n]", aktor, lage, id, projekt) < 3 ||
+            (strcmp(aktor,"claude") && strcmp(aktor,"codex")) ||
+            (strcmp(lage,"vantar") && strcmp(lage,"klar") && strcmp(lage,"jobbar") && strcmp(lage,"borta"))) {
+            snprintf(svar,storlek,"ob fel agent: claude|codex vantar|klar|jobbar|borta id projekt"); return false;
+        }
+        signaler_agent(aktor,lage,id,projekt);
+        snprintf(svar,storlek,"ob ok agent %s %s",aktor,lage); return true;
+    }
     if (borjar_med(rad, "hej", &rest)) {
         snprintf(svar, storlek, "ob hej office-buddy %s", uttryck_namn(ansikte_uttryck()));
         return true;
     }
     if (borjar_med(rad, "status", &rest)) {
-        snprintf(svar, storlek, "ob status energi %.2f glädje %.2f oro %.2f %s %s",
-                 h->energi, h->gladje, h->oro, humor_ord(), uttryck_namn(ansikte_uttryck()));
+        snprintf(svar, storlek, "ob status energi %.2f glädje %.2f oro %.2f %s %s signal %d väntar %d logga %d",
+                 h->energi, h->gladje, h->oro, humor_ord(), uttryck_namn(ansikte_uttryck()), ansikte_signal_typ(), signaler_vantande(), ansikte_agentlogga_typ());
         return true;
     }
     if (borjar_med(rad, "tid", &rest)) {
@@ -185,8 +199,8 @@ bool protokoll_rad(const char *inrad, char *svar, size_t storlek)
         return true;
     }
     if (borjar_med(rad, "claude", &rest)) {
-        char ord[16] = "", id[12] = "", namn[26] = "";
-        sscanf(rest, "%15s %11s %25[^\n]", ord, id, namn);
+        char ord[16] = "", id[65] = "", namn[64] = "";
+        sscanf(rest, "%15s %64s %63[^\n]", ord, id, namn);
         claude_lage_t lage;
         if      (strcmp(ord, "vantar") == 0) lage = CLAUDE_VANTAR;
         else if (strcmp(ord, "klar") == 0)   lage = CLAUDE_KLAR;
@@ -205,7 +219,7 @@ bool protokoll_rad(const char *inrad, char *svar, size_t storlek)
         return true;
     }
     if (borjar_med(rad, "spela", &rest)) {
-        static const char *const LJUD[LJUD_ANTAL] = { "blipp", "lyft", "glad", "trudelutt" };
+        static const char *const LJUD[LJUD_ANTAL] = { "blipp", "lyft", "glad", "trudelutt", "mejl", "claude", "codex", "mote" };
         for (int i = 0; i < LJUD_ANTAL; i++) {
             if (strcmp(rest, LJUD[i]) == 0) {
                 humor_ljud((humor_ljud_t)i);

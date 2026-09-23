@@ -36,10 +36,20 @@ def main():
             lista.append({"hooks": [{"type": "command", "command": f"{KROK} claude {arg}", "timeout": 3}]})
         if not lista:
             del hooks[event]
+    # Frågor från AskUserQuestion får egen livscykel, även utan Notification.
+    for event, arg in (("PreToolUse", "vantar"), ("PostToolUse", "jobbar")):
+        lista = hooks.setdefault(event, [])
+        lista[:] = [g for g in lista if not any("buddy-krok.sh" in h.get("command", "")
+                                                for h in g.get("hooks", []))]
+        if not bort:
+            lista.append({"matcher": "AskUserQuestion", "hooks": [{"type": "command",
+                          "command": f"{KROK} claude {arg}", "timeout": 3}]})
+        if not lista:
+            del hooks[event]
     os.makedirs(os.path.dirname(FIL), exist_ok=True)
     with open(FIL, "w", encoding="utf-8") as f:
         json.dump(d, f, indent=2, ensure_ascii=False)
-    print("Krokarna borttagna." if bort else "Krokarna inlagda: Notification, Stop, UserPromptSubmit, SessionEnd.")
+    print("Krokarna borttagna." if bort else "Krokarna inlagda: Notification, Stop, UserPromptSubmit, SessionEnd och AskUserQuestion.")
 
 
 if __name__ == "__main__":
