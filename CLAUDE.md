@@ -8,7 +8,8 @@ A face on a Waveshare ESP32-S3-Touch-AMOLED-1.8 that follows a mood over
 the day and tells its owner when something needs them. Three parts:
 
 - `delat/` — shared by board and emulator. `ansikte.c` draws and animates,
-  `humor.c` decides, `vyer.c` is the clock and timer, `protokoll.c` parses
+  `humor.c` decides the mood, `signaler.c` owns event scenes and pending questions,
+  `vyer.c` is the clock and timer, `protokoll.c` parses
   the wire protocol. **Nothing in here may know about ESP-IDF, SDL or macOS.**
 - `firmware/` — the thin ESP-IDF layer. Panel, touch, IMU, codec, buttons,
   USB link, RTC. Hardware only.
@@ -27,15 +28,18 @@ The primary README is English. Keep it that way; do not translate the code.
 3. Silence is a feature. When in doubt, say less and say it later.
 4. Every line shown comes from something real (calendar, mail, tools).
 5. **Orange means "something needs you now" and nothing else may use it.**
-   A knock or a tap acknowledges and clears it.
+   Questions clear from their source or `tysta` on the computer; touch and
+   motion never acknowledge them. The board is mounted beyond arm's reach.
 
 ## Working rules
 
 - Change the face in `delat/`, then look at it: build the emulator and
   render stills with `--bild`, `--serie`, `--dag`, `--rad`; the contact
   sheet is `python3 verktyg/kontaktark.py out.png`. Motion must be seen.
-- New behaviour goes into the mood (`humor.c`) as state plus a protocol
-  line, not as a special case in the firmware.
+- New behaviour goes into the shared mood/event modules (`humor.c`,
+  `signaler.c`) plus a protocol line, not as a special case in the firmware.
+- VibePulse is a read-only source. Only explicit questions trigger attention;
+  generic waiting, stale data and silence never mean approval or completion.
 - Everything that touches the panel (brightness, commands) runs under the
   LVGL lock; esp_lcd's panel IO is not thread safe.
 - Keep the expander code in `panelstrom.c`: the BSP does not drive the

@@ -3,6 +3,7 @@
 
 #include "ansikte.h"
 #include "humor.h"
+#include "signaler.h"
 #include "vyer.h"
 
 LV_FONT_DECLARE(lv_font_siffror);
@@ -75,12 +76,9 @@ static void timer_klar(void)
 {
     timer_kor = false;
     timer_kvar_s = timer_satt_s;
-    timer_slut_larmar = true;
+    timer_slut_larmar = false;
     vyer_visa(VY_ANSIKTE);
-    ansikte_varm(true);
-    ansikte_sag("tiden är ute", 30 * 60 * 1000);
-    ansikte_tillfalligt(UTTRYCK_ENTUSIASTISK, 3000);
-    humor_ljud(LJUD_TRUDELUTT);
+    signaler_timer();
 }
 
 /* Ett tryck i timervyn: övre tredjedelen lägger till, nedre drar ifrån, mitten startar. */

@@ -48,6 +48,10 @@ typedef struct { float hz; int ms; float hz2, hz3; } ton_t;
 static const ton_t BLIPP[]     = { { E5, 160 }, { 0 } };
 static const ton_t LYFT[]      = { { C5, 140 }, { G5, 260 }, { 0 } };
 static const ton_t GLAD[]      = { { C5, 130 }, { E5, 130 }, { G5, 300 }, { 0 } };
+static const ton_t MEJL[] = {{G5,100},{E5,100},{C6,220},{0}};
+static const ton_t CLAUDE[] = {{C5,150},{G5,220},{0}};
+static const ton_t CODEX[] = {{E5,110},{A5,260},{0}};
+static const ton_t MOTE[] = {{G5,180},{C6,300},{0}};
 static const ton_t TRUDELUTT[] = {
     { C5, 120 }, { E5, 120 }, { G5, 120 }, { C6, 200 },
     { G5, 120 }, { C6, 120 }, { E6, 240 },
@@ -103,7 +107,9 @@ static void uppgift(void *arg)
         if (xQueueReceive(ko, &l, portMAX_DELAY) != pdTRUE) continue;
         if (!pa || volym <= 0 || hogtalare == NULL) continue;
         const ton_t *toner = l == LJUD_BLIPP ? BLIPP : l == LJUD_LYFT ? LYFT
-                           : l == LJUD_GLAD ? GLAD : TRUDELUTT;
+                           : l == LJUD_GLAD ? GLAD : l == LJUD_MEJL ? MEJL
+                           : l == LJUD_CLAUDE ? CLAUDE : l == LJUD_CODEX ? CODEX
+                           : l == LJUD_MOTE ? MOTE : TRUDELUTT;
         static const ton_t paus = { 0, 20 };
         for (const ton_t *t = toner; t->ms > 0; t++) {
             spela_ton(t);

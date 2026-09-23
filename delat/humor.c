@@ -8,6 +8,7 @@
 
 #include "ansikte.h"
 #include "humor.h"
+#include "signaler.h"
 
 /* ---- Tillståndet ------------------------------------------------------- */
 
@@ -25,20 +26,13 @@ static int   vantande_antal, vantande_roda;
 static char  aldst_projekt[64];
 static int   aldst_dagar;
 static int32_t replik_kvar_ms;               /* tystnad tills nästa replik ur oron */
-static claude_lage_t claude_lage = CLAUDE_JOBBAR;
 static bool lank_ok = true;
 static bool hemma = true;
 static int32_t varm_kvar_ms;                 /* tillfällig orange, t.ex. saknad backup */
-static int     klappar;                      /* klappar i följd */
 static int32_t sysslolos_ms;                 /* tid utan händelser, vaken */
 static int32_t drom_kvar_ms;                 /* tills nästa dröm i sömnen */
-static int32_t klapp_kvar_ms;                /* tills följden bryts */
 static bool sov_for_lanken;
-static int32_t claude_paminn_ms;             /* tills nästa lilla blick mot datorn */
 
-#define CLAUDE_MAX 8
-typedef struct { char id[12]; char namn[26]; claude_lage_t lage; } claude_session_t;
-static claude_session_t sessioner[CLAUDE_MAX];
 static bool  morgon_sagd;                    /* en gång per morgon */
 static bool  natt_sagd;
 
@@ -209,6 +203,9 @@ void humor_tick(float timme, int32_t dt_ms)
         }
     }
 
+    signaler_vila(h.sover);
+    if (signaler_upptagen()) return;
+
     /* Grunduttrycket byts först när ett annat val hållit i sig ett tag. */
     val_kvar_ms -= dt_ms;
     grund_ms += dt_ms;
@@ -226,20 +223,9 @@ void humor_tick(float timme, int32_t dt_ms)
     }
 
     if (replik_kvar_ms > 0) replik_kvar_ms -= dt_ms;
-    if (klapp_kvar_ms > 0) { klapp_kvar_ms -= dt_ms; if (klapp_kvar_ms <= 0) klappar = 0; }
     if (varm_kvar_ms > 0) {
         varm_kvar_ms -= dt_ms;
-        if (varm_kvar_ms <= 0 && claude_lage == CLAUDE_JOBBAR) ansikte_varm(false);
-    }
-
-    /* Claude väntar: en liten blick mot datorn då och då, utan ljud. */
-    if (claude_lage != CLAUDE_JOBBAR && !h.sover) {
-        claude_paminn_ms -= dt_ms;
-        if (claude_paminn_ms <= 0) {
-            claude_paminn_ms = (int32_t)slump(120000, 240000);
-            ansikte_tillfalligt(UTTRYCK_NYFIKEN, 2000);
-            ansikte_titta(0, 0.8f);
-        }
+        if (varm_kvar_ms <= 0) ansikte_varm(false);
     }
 
     /* Morgon och natt får ett ord var. */
@@ -256,7 +242,7 @@ void humor_tick(float timme, int32_t dt_ms)
     }
     drom_kvar_ms = (int32_t)slump(60000, 180000);
     sysslolos_ms += dt_ms;
-    natt_sagd = false;
+    if (timme < 21) natt_sagd = false;
     if (!morgon_sagd && h.energi > 0.55f && timme >= 6 && timme < 11) {
         morgon_sagd = true;
         ansikte_sag(vantande_antal > 0 ? "god morgon. det ligger saker och väntar." : "god morgon", 6000);
@@ -292,52 +278,27 @@ void humor_tick(float timme, int32_t dt_ms)
     }
 }
 
-/*
- * Kvittot. Orange är en fråga, och ett knack eller ett tryck är svaret:
- * färgen går tillbaka, raden försvinner, och buddyn nickar nöjt utan ljud.
- * Det gäller oavsett vad som frågade: Claude, ett möte, en påminnelse,
- * backupen eller timern.
- */
-static void kvittera(void)
-{
-    ansikte_varm(false);
-    varm_kvar_ms = 0;
-    ansikte_sag("", 0);
-    claude_lage = CLAUDE_JOBBAR;
-    memset(sessioner, 0, sizeof(sessioner));
-    ansikte_tillfalligt(UTTRYCK_NOJD, 1800);
-    ansikte_blinka();
-}
-
 void humor_handelse(humor_handelse_t e)
 {
     sysslolos_ms = 0;
     switch (e) {
     case HANDELSE_PETAD:
+        break; /* buddyn styrs från datorn; glaset behöver inte nås */
     case HANDELSE_KNACK:
-        if (ansikte_ar_varm()) { kvittera(); break; }
-        if (h.sover) {
-            /* Vaknar till, men somnar om ifall det är natt. */
-            vaken_extra += 0.15f;
-            ansikte_sover(false);
-            ansikte_tillfalligt(UTTRYCK_SOMNIG, 2500);
-        } else {
-            /* Klappar i följd: första tittar upp, andra ler, tredje blundar nöjt. */
-            klappar++;
-            klapp_kvar_ms = 2200;
-            ansikte_klappad(klappar);
+        if (!signaler_upptagen() && !h.sover) {
+            ansikte_tillfalligt(UTTRYCK_FORVANAD, 1000);
+            ansikte_titta(-0.5f, 0);
         }
-        gladje_extra += klappar >= 3 ? 0.4f : 0.25f;
-        vaken_extra  += 0.06f;
-        if (klappar <= 2) ljud(LJUD_BLIPP);
         break;
     case HANDELSE_LYFT:
+        if (signaler_upptagen()) break;
         vaken_extra += 0.35f;
         if (h.sover) { h.sover = false; ansikte_sover(false); }
         ansikte_tillfalligt(UTTRYCK_FORVANAD, 1500);
         ljud(LJUD_LYFT);
         break;
     case HANDELSE_AVBOCKAT:
+        if (signaler_upptagen()) break;
         gladje_extra += 0.6f;
         ansikte_tillfalligt(UTTRYCK_VALDIGT_GLAD, 3000);
         ljud(LJUD_GLAD);
@@ -352,96 +313,11 @@ void humor_satt_vantande(int antal, int roda)
     vantande_roda  = roda;
 }
 
-/* Skriver raden för det som återstår: väntande först, sedan klara. */
-static void claude_visa(void)
-{
-    int vantar = 0, klara = 0;
-    const claude_session_t *forsta_v = NULL, *forsta_k = NULL;
-    for (int i = 0; i < CLAUDE_MAX; i++) {
-        if (sessioner[i].id[0] == '\0') continue;
-        if (sessioner[i].lage == CLAUDE_VANTAR) { vantar++; if (!forsta_v) forsta_v = &sessioner[i]; }
-        if (sessioner[i].lage == CLAUDE_KLAR)   { klara++;  if (!forsta_k) forsta_k = &sessioner[i]; }
-    }
-    char rad[128];
-    if (vantar > 0) {
-        claude_lage = CLAUDE_VANTAR;
-        if (vantar == 1) snprintf(rad, sizeof(rad), "Claude väntar: %s", forsta_v->namn);
-        else snprintf(rad, sizeof(rad), "Claude väntar: %s och %d till", forsta_v->namn, vantar - 1);
-        ansikte_varm(true);
-        ansikte_sag(rad, 30 * 60 * 1000);
-    } else if (klara > 0) {
-        claude_lage = CLAUDE_KLAR;
-        if (klara == 1) snprintf(rad, sizeof(rad), "Claude klar: %s", forsta_k->namn);
-        else snprintf(rad, sizeof(rad), "Claude klar: %s och %d till", forsta_k->namn, klara - 1);
-        ansikte_varm(true);
-        ansikte_sag(rad, 30 * 60 * 1000);
-    } else {
-        claude_lage = CLAUDE_JOBBAR;
-        ansikte_varm(false);
-        ansikte_sag("", 0);
-    }
-}
-
-static claude_session_t *claude_hitta(const char *id, bool skapa)
-{
-    for (int i = 0; i < CLAUDE_MAX; i++) {
-        if (strcmp(sessioner[i].id, id) == 0) return &sessioner[i];
-    }
-    if (!skapa) return NULL;
-    for (int i = 0; i < CLAUDE_MAX; i++) {
-        if (sessioner[i].id[0] == '\0') {
-            strncpy(sessioner[i].id, id, sizeof(sessioner[i].id) - 1);
-            sessioner[i].lage = CLAUDE_JOBBAR;
-            return &sessioner[i];
-        }
-    }
-    /* Fullt: ta den första platsen, det är ändå den äldsta. */
-    memset(&sessioner[0], 0, sizeof(sessioner[0]));
-    strncpy(sessioner[0].id, id, sizeof(sessioner[0].id) - 1);
-    return &sessioner[0];
-}
-
 void humor_satt_claude(claude_lage_t lage, const char *id, const char *namn)
 {
-    sysslolos_ms = 0;
-    if (id == NULL || id[0] == '\0') id = "0";
-    if (lage == CLAUDE_JOBBAR) {
-        claude_session_t *s = claude_hitta(id, false);
-        if (s == NULL) return;
-        memset(s, 0, sizeof(*s));
-        claude_visa();
-        return;
-    }
-    claude_session_t *s = claude_hitta(id, true);
-    if (namn != NULL && namn[0] != '\0') {
-        strncpy(s->namn, namn, sizeof(s->namn) - 1);
-        s->namn[sizeof(s->namn) - 1] = '\0';
-    } else if (s->namn[0] == '\0') {
-        strncpy(s->namn, "claude", sizeof(s->namn) - 1);
-    }
-    bool nytt = s->lage != lage;
-    s->lage = lage;
-    claude_visa();
-    if (!nytt) return;
-    /* Varje ny signal från en session hörs och syns, även om en annan redan väntar. */
-    if (lage == CLAUDE_VANTAR) {
-        ansikte_tillfalligt(UTTRYCK_NYFIKEN, 3000);
-        ansikte_titta(0, 0.8f);
-        ljud(LJUD_LYFT);
-    } else {
-        ansikte_tillfalligt(UTTRYCK_GLAD, 2500);
-        ansikte_titta(0, 0.8f);
-        ljud(LJUD_BLIPP);
-    }
-    claude_paminn_ms = (int32_t)slump(120000, 240000);
+    signaler_agent("claude", lage == CLAUDE_VANTAR ? "vantar" : lage == CLAUDE_KLAR ? "klar" : "jobbar", id, namn);
 }
-
-int humor_claude_vantande(void)
-{
-    int n = 0;
-    for (int i = 0; i < CLAUDE_MAX; i++) if (sessioner[i].id[0] && sessioner[i].lage == CLAUDE_VANTAR) n++;
-    return n;
-}
+int humor_claude_vantande(void) { return signaler_vantande(); }
 
 void humor_satt_lank(bool ok)
 {
@@ -453,8 +329,7 @@ void humor_satt_lank(bool ok)
         ansikte_sover(true);
         ansikte_sag("", 0);
         ansikte_varm(false);
-        claude_lage = CLAUDE_JOBBAR;
-        memset(sessioner, 0, sizeof(sessioner));
+        signaler_vila(true);
     } else if (sov_for_lanken && h.energi > 0.22f) {
         sov_for_lanken = false;
         h.sover = false;
@@ -464,56 +339,30 @@ void humor_satt_lank(bool ok)
         ansikte_gaspa();
         ljud(LJUD_TRUDELUTT);
     }
+    signaler_vila(!lank_ok || !hemma || h.sover);
 }
 
 void humor_mote(int minuter, const char *rubrik)
 {
     sysslolos_ms = 0;
-    char rad[128];
-    if (minuter <= 1) {
-        snprintf(rad, sizeof(rad), "möte nu: %s", rubrik ? rubrik : "");
-        ansikte_varm(true);
-        varm_kvar_ms = 90000;
-        ansikte_tillfalligt(UTTRYCK_FORVANAD, 2500);
-        ansikte_sag(rad, 90000);
-        ljud(LJUD_TRUDELUTT);
-    } else {
-        snprintf(rad, sizeof(rad), "möte om %d min: %s", minuter, rubrik ? rubrik : "");
-        ansikte_varm(true);
-        varm_kvar_ms = 30000;
-        ansikte_tillfalligt(UTTRYCK_NYFIKEN, 2500);
-        ansikte_titta(0, 0.8f);
-        ansikte_sag(rad, 30000);
-        ljud(LJUD_LYFT);
-    }
+    signaler_mote(minuter, rubrik);
 }
 
 void humor_paminnelse(const char *text)
 {
-    sysslolos_ms = 0;
     char rad[128];
     snprintf(rad, sizeof(rad), "påminnelse: %s", text ? text : "");
-    ansikte_varm(true);
-    varm_kvar_ms = 30000;
-    ansikte_tillfalligt(UTTRYCK_NYFIKEN, 2500);
-    ansikte_titta(0, 0.8f);
-    ansikte_sag(rad, 30000);
-    ljud(LJUD_BLIPP);
+    sysslolos_ms = 0;
+    signaler_notis(SIGNAL_PAMINNELSE, 0, rad);
 }
 
 void humor_meddelande(int typ, uint32_t hex, const char *text)
 {
-    sysslolos_ms = 0;
-    static const char *const ORD[] = { "", "nytt mejl", "sms", "Teams" };
-    if (typ < 1 || typ > 3) typ = 1;
+    if (typ == 1) { humor_mejl(hex, text); return; }
     char rad[128];
-    snprintf(rad, sizeof(rad), "%s: %s", ORD[typ], text ? text : "");
-    if (hex != 0) ansikte_ton(hex, 8000);
-    ansikte_ikon((ansikte_ikon_t)typ, hex, 6000);
-    ansikte_tillfalligt(UTTRYCK_NYFIKEN, 2200);
-    ansikte_titta(0.8f, -0.7f);   /* mot ikonen */
-    ansikte_sag(rad, 8000);
-    if (typ != 1) ljud(LJUD_BLIPP);
+    snprintf(rad, sizeof(rad), "%s: %s", typ == 2 ? "SMS" : "Teams", text ? text : "");
+    sysslolos_ms = 0;
+    signaler_notis(typ == 2 ? SIGNAL_SMS : SIGNAL_TEAMS, hex, rad);
 }
 
 void humor_satt_hemma(bool ny)
@@ -533,28 +382,19 @@ void humor_satt_hemma(bool ny)
         ansikte_blinka();
         ljud(LJUD_BLIPP);
     }
+    signaler_vila(!lank_ok || !hemma || h.sover);
 }
 
 void humor_mejl(uint32_t hex, const char *text)
 {
     sysslolos_ms = 0;
-    char rad[128];
-    snprintf(rad, sizeof(rad), "nytt mejl: %s", text ? text : "");
-    if (hex != 0) ansikte_ton(hex, 8000);
-    ansikte_ikon(IKON_KUVERT, hex, 6000);
-    ansikte_tillfalligt(UTTRYCK_NYFIKEN, 2000);
-    ansikte_titta(0.8f, -0.7f);
-    ansikte_sag(rad, 8000);
+    signaler_mejl(hex, text);
 }
 
 void humor_satt_backup(bool ok, const char *text)
 {
-    if (ok) return;   /* det som fungerar behöver inte sägas */
-    ansikte_varm(true);
-    varm_kvar_ms = 60000;
-    ansikte_tillfalligt(UTTRYCK_OROLIG, 4000);
-    ansikte_sag(text != NULL && text[0] ? text : "nattens backup saknas", 20000);
-    ljud(LJUD_LYFT);
+    if (!ok) signaler_notis(SIGNAL_BACKUP, 0,
+        text && text[0] ? text : "nattens backup saknas");
 }
 
 void humor_satt_aldst(const char *projekt, int dagar)

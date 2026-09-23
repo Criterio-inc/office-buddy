@@ -22,6 +22,7 @@ startar inte om när länken ansluter.
 """
 import argparse, glob, json, os, queue, select, socket, subprocess, sys, termios, threading, time, urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from agentvakt import Agentvakt, bevaka, radtext
 
 HAR = os.path.dirname(os.path.abspath(__file__))
 
@@ -33,6 +34,9 @@ STANDARD = {
     "wifi_port": 8740,
     "brevlada_port": 8739,
     "puls_url": "",
+    "puls_ignorera": [],
+    "agentstatus_url": "http://127.0.0.1:8737/api/agent-status",
+    "agentstatus_aktorer": ["codex"],
     "backup_status": "",
     "offsite_status": "",
     "backup_koll_efter": 11.5,
@@ -73,13 +77,13 @@ BACKUP_KOLL_EFTER_TIMME = float(INST["backup_koll_efter"])
 KALENDER_BIN = os.path.join(HAR, "kalender")
 KALENDER_VAR_S = 60
 MOTE_VARNA_MIN = int(INST["mote_varna_min"])
-MEJL_VAR_S = 120
+MEJL_VAR_S = 15
 # Kontonas färger, som de heter i Mail, ur buddy.json. Okänt konto ger ingen färg.
 KONTOFARGER = dict(INST["kontofarger"])
 KALENDER_IGNORERA = [str(x).lower() for x in INST["kalender_ignorera"]]
 PAMINNELSE_VAR_S = 60
 PAMINNELSE_FONSTER_MIN = 5
-MEJL_TYST_S = 600
+MEJL_TYST_S = 15
 BREVLADA_PORT = int(INST["brevlada_port"])
 HAMTA_VAR_S = 30
 KLOCKA_VAR_S = 600
@@ -161,6 +165,7 @@ class Lank:
         self.vag = ""
 
     def skicka(self, rad):
+        rad = radtext(rad, 240)
         if self.fd is None:
             return False
         try:
@@ -388,13 +393,20 @@ class Paminnelsevakt:
 MEJL_SKRIPT = """
 tell application "Mail"
     set n to unread count of inbox
-    if n is 0 then return "0"
-    set m to message 1 of inbox
+    if (count of messages of inbox) is 0 then return "0||||"
+    -- Den samlade inkorgen är grupperad per konto, inte sorterad efter datum.
+    -- Hämta datumen i ett enda anrop och välj det faktiskt senaste mejlet.
+    set datum to date received of messages of inbox
+    set senaste to 1
+    repeat with i from 2 to count of datum
+        if item i of datum > item senaste of datum then set senaste to i
+    end repeat
+    set m to message senaste of inbox
     set k to ""
     try
         set k to name of account of mailbox of m
     end try
-    return (n as text) & "|" & (sender of m) & "|" & (subject of m) & "|" & k
+    return (n as text) & "|" & (sender of m) & "|" & (subject of m) & "|" & k & "|" & (id of m as text)
 end tell
 """
 
@@ -410,7 +422,7 @@ def mejl_lage():
             logg("mejlen: " + r.stderr.strip()[:160])
             mejl_lage.klagat = True
         return None
-    delar = r.stdout.strip().split("|", 3)
+    delar = r.stdout.strip().split("|", 4)
     try:
         antal = int(delar[0])
     except (ValueError, IndexError):
@@ -421,7 +433,8 @@ def mejl_lage():
     # "Namn <adress>" -> Namn
     if "<" in avs:
         avs = avs.split("<")[0].strip().strip('"')
-    return antal, avs, amne, konto
+    mid = delar[4] if len(delar) > 4 else ""
+    return antal, avs, amne, konto, mid
 
 
 # ---- Notiserna: sms, Teams och annat som ger en notis ---------------------------
@@ -459,7 +472,7 @@ class Notisvakt:
 
     def _oppna(self):
         import sqlite3
-        return sqlite3.connect(f"file:{NOTIS_DB}?mode=ro&immutable=1", uri=True, timeout=1)
+        return sqlite3.connect(f"file:{NOTIS_DB}?mode=ro", uri=True, timeout=1)
 
     def status(self):
         try:
@@ -518,8 +531,30 @@ def skarm_last():
         return False
 
 
+class Bakgrundsvakt:
+    """En långsam macOS-källa får aldrig stoppa USB-länken eller brevlådan."""
+    def __init__(self, vakt):
+        self.vakt = vakt
+        self.trad = None
+
+    def kolla(self, lank):
+        if self.trad is not None and self.trad.is_alive():
+            return
+        class Utko:
+            def skicka(self, rad):
+                brev.put((time.monotonic() + 60, rad))
+                return True
+        def arbete():
+            try:
+                self.vakt.kolla(Utko())
+            except Exception as fel:
+                logg(f"{type(self.vakt).__name__}: {fel}")
+        self.trad = threading.Thread(target=arbete, daemon=True)
+        self.trad.start()
+
+
 class Mejlvakt:
-    """En blick när olästa blir fler, högst en gång per tio minuter."""
+    """Reagerar när det senast mottagna mejlet ändras, även om det är läst."""
     def __init__(self):
         self.forra = None
         self.tyst_till = 0
@@ -528,15 +563,23 @@ class Mejlvakt:
         lage = mejl_lage()
         if lage is None:
             return
-        antal, avs, amne, konto = lage
-        if self.forra is not None and antal > self.forra and time.time() >= self.tyst_till:
+        antal, avs, amne, konto, mid = lage
+        if self.forra is not None and mid and mid != self.forra:
             text = f"{avs}" if avs else f"{antal} olästa"
             if amne:
                 text += f", {amne[:40]}"
             farg = KONTOFARGER.get(konto, "")
             lank.skicka(f"mejl {farg + ' ' if farg else ''}{text}")
-            self.tyst_till = time.time() + MEJL_TYST_S
-        self.forra = antal
+        self.forra = mid
+
+
+def filtrera_puls(puls):
+    """Dölj uttryckligen bortvalda projekt utan att ändra projektkällan."""
+    ignorera = set(INST.get("puls_ignorera", []))
+    if not ignorera:
+        return puls
+    poster = [p for p in puls.get("poster", []) if p.get("projekt") not in ignorera]
+    return {**puls, "poster": poster, "antal": len(poster)}
 
 
 def las_puls():
@@ -557,13 +600,21 @@ def main():
     lank = Lank(val.port or INST["port"] or None)
 
     if val.skicka:
-        if not lank.anslut():
-            sys.exit("hittar inget kort")
-        lank.skicka(val.skicka)
-        lank.las(2)
+        req = urllib.request.Request(f"http://127.0.0.1:{BREVLADA_PORT}/",
+                                     data=(val.skicka + "\n").encode(), method="POST")
+        try:
+            with urllib.request.urlopen(req, timeout=3) as svar:
+                print(svar.read().decode().strip())
+        except Exception as fel:
+            sys.exit(f"Länktjänsten svarar inte: {fel}. Starta tjänsten först.")
         return
 
     starta_brevlada()
+    agentvakt = None
+    if INST["agentstatus_url"]:
+        agentvakt = Agentvakt(lambda rad: brev.put((time.monotonic() + 15, rad)), INST["agentstatus_aktorer"])
+        threading.Thread(target=bevaka, args=(INST["agentstatus_url"], agentvakt,
+                         threading.Event(), logg), daemon=True).start()
     # En rad vid start om vad vakterna ser, så att loggen visar om tillstånden finns.
     logg("inställningar: " + ", ".join(k for k in ("kalender", "mejl", "paminnelser") if INST[k])
          + (", puls" if PULSSERVER else "") + (", backup" if (BACKUP_STATUS or OFFSITE_STATUS) else ""))
@@ -594,11 +645,12 @@ def main():
     forra_antal = None
     lagre_i_rad = 0
     nasta_hamtning = 0
+    nasta_liv = 0
     nasta_klocka = 0
     backup_sagd_dag = None
-    kalender = Kalendervakt()
-    mejl = Mejlvakt()
-    paminnelser = Paminnelsevakt()
+    kalender = Bakgrundsvakt(Kalendervakt())
+    mejl = Bakgrundsvakt(Mejlvakt())
+    paminnelser = Bakgrundsvakt(Paminnelsevakt())
     nasta_kalender = 0
     nasta_mejl = 0
     nasta_paminnelse = 0
@@ -613,7 +665,14 @@ def main():
             lank.skicka("hej")
             nasta_klocka = 0
             nasta_hamtning = 0
+            nasta_liv = 0
+            var_last = None
+            if agentvakt:
+                agentvakt.ateranslut()
         nu = time.time()
+        if nu >= nasta_liv:
+            lank.skicka("hej")
+            nasta_liv = nu + 30
         if nu >= nasta_klocka:
             forskjutning = -time.altzone if time.localtime(nu).tm_isdst > 0 else -time.timezone
             lank.skicka(f"tid {int(nu)} {int(forskjutning)}")
@@ -621,6 +680,7 @@ def main():
         if nu >= nasta_hamtning and PULSSERVER:
             puls = las_puls()
             if puls is not None:
+                puls = filtrera_puls(puls)
                 antal = int(puls.get("antal", 0))
                 roda = sum(1 for p in puls.get("poster", []) if p.get("bradska") == "rod")
                 lank.skicka(f"vantande {antal} {roda}")
@@ -652,7 +712,7 @@ def main():
             nasta_notis = nu + NOTIS_VAR_S
         if nu >= nasta_las and INST["skarmlas"]:
             last = skarm_last()
-            if var_last is not None and last != var_last:
+            if var_last is None or last != var_last:
                 lank.skicka("borta" if last else "hemma")
             var_last = last
             nasta_las = nu + 5
@@ -671,6 +731,10 @@ def main():
                 rad = brev.get_nowait()
             except queue.Empty:
                 break
+            if isinstance(rad, tuple):
+                giltig_till, rad = rad
+                if time.monotonic() > giltig_till:
+                    continue
             lank.skicka(rad)
         lank.las(1)
 

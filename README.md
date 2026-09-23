@@ -1,7 +1,7 @@
 # Office Buddy
 
 A small face on your shelf that blinks, yawns, looks at you and follows a
-mood over the day. It tells you when Claude is waiting for you, when a
+mood over the day. It tells you when Claude or Codex is waiting for you, when a
 meeting starts in ten minutes, when a reminder is due, and when a new mail
 arrives, and it says very little else. No words spoken, only eyes, a mouth,
 colours and a few soft chimes.
@@ -37,13 +37,12 @@ are in Swedish; the protocol keywords are too. That is part of its charm.*
 | Claude Code needs you | turns **orange**, looks up, "Claude väntar: project", rising two-tone; each session announced separately |
 | Meeting in 10 min | orange, "möte om 10 min: title", two-tone; jingle when it starts |
 | Reminder due | orange for 30 s, "påminnelse: title", a blip |
-| New mail | an envelope bounces in, the account's colour, "nytt mejl: sender, subject", no sound |
+| New mail | large **@ @** eyes, envelope, account colour and a dedicated short mail melody |
 | SMS or Teams message | a speech bubble bounces in, the app's colour, a blip (`server/Notiser.app` reads Notification Center; grant it Full Disk Access) |
 | Screen locked / unlocked | sleeps when you lock the Mac, wakes and looks at you when you unlock |
 | Nightly backup missing | orange, worried, "backup saknas" (optional, reads your own status files) |
 | Timer done | orange, "tiden är ute", jingle |
-| A knock or a tap | **acknowledges** everything: back to green, line cleared, a content nod |
-| Pats in a row | looks up at your hand, then smiles, then closes its eyes and blushes |
+| A movement bump | a brief surprised glance; never acknowledges an agent |
 | Swipe left | a clock: big digits, the date, seconds as a growing line |
 | Swipe again | a timer: tap top +5 min, bottom −5, middle to start |
 | Lift the board | surprised; wakes it up if asleep |
@@ -53,10 +52,65 @@ are in Swedish; the protocol keywords are too. That is part of its charm.*
 | Asleep | eyes become soft waves; a few times a night it dreams in colourful TV static |
 | Nothing for 20 min | sometimes a fly buzzes across the glass and the gaze follows it out |
 
-Orange means exactly one thing: *something needs you now*. It shows for
-three seconds and lets go; the line stays. Nothing else may use it.
+Orange marks a pending question or timed reminder. Agent questions stay visible
+until the computer clears them, their source expires, or you send `tysta`.
+A tap never acknowledges or answers an agent.
 
 ![Orange when something needs you](bilder/orange.png)
+
+## Event scenes and VibePulse
+
+Mail opens the eyes into **@ @**, then relaxes into a smile. Claude and Codex
+get their respective logo in both eyes and distinct chimes. Completion now holds the logo until new work starts in the same agent, the source disappears, or you explicitly silence it. Meetings get a
+clock, and completed agent turns get a short jump with stars. Timed scenes
+return automatically; the buddy is designed to be useful beyond arm's reach.
+
+The new `delat/signaler.c` scheduler gives meetings priority over agent
+questions, then mail/completion scenes. Deferred scenes expire after one
+minute; repeated mail chimes are limited to once a minute. SMS/Teams, reminders and backup warnings wait in the same queue behind
+meetings and agent questions.
+
+The Mac link reads VibePulse's local `/api/agent-status` v2 endpoint every
+two seconds in a background thread. Configure `agentstatus_url` and
+`agentstatus_aktorer` in `server/buddy.json`. The default endpoint is
+`http://127.0.0.1:8737/api/agent-status`, with only `codex` enabled because
+Claude already has direct hooks. An empty URL disables the bridge. To use
+VibePulse for Claude too, remove the direct hooks and add `claude` to the list.
+VibePulse's tokenserver must already be running; Office Buddy does not install it.
+
+Only explicit `waiting_input`, `waiting_approval`, or a live `pending` request
+causes a question. Generic `waiting` does not. Codex questions require a source
+that actually publishes these signals (for example VibePulse's configured
+interaction bridge); ordinary session logs alone may not include them.
+This reader never sends decisions to VibePulse or either agent.
+
+Each pending request is refreshed; a missing request clears without claiming
+it was answered. After 30 seconds without the server, questions are cleared;
+the board also expires unrefreshed VibePulse questions after 90 seconds.
+Direct Claude hook questions expire after two hours as a fallback. Old completed
+turns do not replay at startup. The USB heartbeat runs independently of the
+optional pulse service.
+
+Examples through the running link service (no competing serial reader):
+
+```bash
+python3 server/buddylank.py --skicka "mejl Test sender"
+python3 server/buddylank.py --skicka "agent codex vantar demo Office-buddy"
+python3 server/buddylank.py --skicka "agent codex jobbar demo Office-buddy"
+python3 server/buddylank.py --skicka "agent codex klar demo Office-buddy"
+python3 server/buddylank.py --skicka "mote 10 Project meeting"
+python3 server/buddylank.py --skicka "tysta"
+```
+
+`tysta` dismisses the display; it never approves a command or answers a question.
+The same commands work with the simulator's `--rad` option. Run
+`python3 -m unittest discover -s test` and `sim/build/office-buddy-sim --kontroll`
+for bridge and real-LVGL event lifecycle checks. For an external LVGL checkout,
+configure the simulator with `-DLVGL_DIR=/absolute/path/to/lvgl`.
+
+After updating the firmware, restart the link service and rerun
+`python3 server/claude-krokar.py` to add the AskUserQuestion lifecycle hooks.
+Physical timing, volume and motion sensitivity still need review on the board.
 
 ## Hardware
 
@@ -128,7 +182,7 @@ calendar and reminder access. Mail must be running. Logs go to
 python3 server/claude-krokar.py
 ```
 
-This adds four hooks to `~/.claude/settings.json` (a backup is written)
+This installs lifecycle hooks to `~/.claude/settings.json` (a backup is written)
 that post to the link's mailbox when Claude waits, finishes or resumes.
 
 ## The mailbox
@@ -145,7 +199,7 @@ curl -s -X POST --data-binary "spela trudelutt" http://127.0.0.1:8739/
 The full protocol is documented in [`delat/protokoll.h`](delat/protokoll.h):
 `hej`, `status`, `tid`, `vantande`, `aldst`, `avbockat`, `peta`, `knack`,
 `lyft`, `uttryck`, `sag`, `ljus`, `ljud`, `spela`, `claude`, `mote`, `mejl`,
-`paminnelse`, `backup`, `vy`, `timer`.
+`paminnelse`, `backup`, `vy`, `timer`, `agent`, `tysta`.
 
 ## How it is built
 
@@ -193,3 +247,7 @@ this board. Office Buddy runs on the 1.8-inch one. They get along.
 ## Licence
 
 MIT. Fonts: Lato, SIL Open Font License.
+
+### Notification delivery checks
+
+The macOS notification helper reads SQLite in read-only WAL-aware mode, polls every two seconds, coalesces bursts per app type and retries failed HTTP delivery for up to two minutes. It logs receipt and delivery without message content. Use `Notiser.app/Contents/MacOS/notiser --diagnostik` to inspect app identifiers; the launchd service must have Full Disk Access. Mail, calendar and reminder checks run outside the USB loop so a slow source cannot hold up other signals. A protocol acknowledgement confirms receipt, not physical visibility or sound.

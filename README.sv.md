@@ -1,7 +1,7 @@
 # Office Buddy
 
 Ett ansikte på hyllan som blinkar, gäspar, tittar på en och reagerar på vad
-som händer under dagen. Inga ord, bara ögon, mun och färger.
+som händer under dagen. Ögon, mun, korta textrader och mjuka ljud.
 
 Ansiktet lyser cyanblått ur en svart yta, som i förlagan. Svart är inte ett
 stilval utan ett hårdvaruval: på en AMOLED är en släckt bildpunkt verkligen
@@ -143,19 +143,53 @@ ut klockslag, energi, glädje, oro och uttryck i loggen.
 Projektpulsen ligger kvar i `~/Projects/projektpulsen` och kan flashas
 tillbaka när som helst.
 
-## Kvittot
+## Händelser som syns på håll
 
-Orange är en fråga, och ett knack på bordet eller ett tryck på glaset är
-svaret. Färgen glider tillbaka till cyan, raden försvinner och buddyn
-nickar nöjt utan ljud, vad det än var som frågade: Claude, ett möte, en
-påminnelse, backupen eller timern.
+Mejl ger stora **@ @-ögon**, ett kuvert och en egen kort trudelutt. Claude
+eller Codex som behöver svar får sin respektive logga i båda ögonen och en
+egen tvåton. Möten får en klocksymbol. När en agent blir klar visas loggan i 20 sekunder med ljusa ögon och sedan återgår Buddy automatiskt. Bara verkliga frågor har kvar orange agentögon. Flera väntande uppgifter växlar var femte sekund.
 
-## Klappa den
+Ingen klapp behövs. En rörelsestöt ger bara en förvånad blick. Agentfrågor
+försvinner när källan rapporterar att de upphört, eller med `tysta` från
+datorn. Det kommandot tystar visningen och svarar aldrig åt dig.
 
-Ett tryck på glaset eller ett knack på bordet är en klapp. Den första får
-buddyn att titta upp mot handen med stora pupiller, den andra får den att
-le, och från den tredje i följd blundar den nöjt och rodnar. Följden bryts
-efter ett par sekunder. Är buddyn orange kvitterar klappen i stället.
+`delat/signaler.c` prioriterar möten, agentfrågor och sedan mejl/klart.
+Väntande korta scener blir inaktuella efter en minut. Mejl låter högst en
+gång per minut. SMS, Teams, påminnelser och backupvarningar köas medan en
+prioriterad scen visas.
+
+## Codex genom VibePulse
+
+Länktjänsten läser `http://127.0.0.1:8737/api/agent-status` varannan sekund.
+VibePulses tokenserver måste köras separat. Inställningarna heter
+`agentstatus_url` och `agentstatus_aktorer` i `server/buddy.json`; tom URL
+stänger bryggan. Standard är `["codex"]`, eftersom Claude redan har egna
+krokar. För båda via VibePulse: ta bort Claude-krokarna och välj
+`["claude", "codex"]`.
+
+Bara uttryckliga frågor eller godkännanden triggar ”väntar”. En vanlig
+avslutad svarstur gör det inte. För Codex behövs en källa som publicerar
+frågorna, exempelvis VibePulses konfigurerade interaktionsbrygga. Vanliga
+sessionsloggar räcker inte alltid. Office Buddy läser bara status och
+skickar inga svar eller godkännanden.
+
+Efter 30 sekunders avbrott i datakällan släcks dess frågor. Kortet har
+också en reservgräns på 90 sekunder utan förnyelse. Direkta Claude-krokar
+har två timmar som reservgräns. Gamla klarmarkeringar spelas inte vid start.
+
+```bash
+python3 server/buddylank.py --skicka "agent codex vantar demo Office-buddy"
+python3 server/buddylank.py --skicka "agent codex jobbar demo Office-buddy"
+python3 server/buddylank.py --skicka "agent codex klar demo Office-buddy"
+python3 server/buddylank.py --skicka "tysta"
+```
+
+`--skicka` använder tjänstens brevlåda; tjänsten måste vara igång.
+Samma rader kan provas i simulatorn med `--rad`. Kör testerna med
+`python3 -m unittest discover -s test` och `sim/build/office-buddy-sim --kontroll`.
+Efter firmwareuppdateringen startas länktjänsten om. Kör också
+`python3 server/claude-krokar.py` för frågornas nya AskUserQuestion-krokar.
+Ljudnivå och rörelser behöver slutligen provas på det fysiska kortet.
 
 ## Fyra små scener
 
@@ -218,12 +252,10 @@ förfallit eller förfaller inom fem minuter, och när en förfaller blir
 buddyn orange en halv minut, tittar upp och säger "påminnelse: ring
 Niclas" med ett blipp. En gång per påminnelse.
 
-Mejlen läses ur Mail-appens samlade inkorg var annan minut. Blir de olästa
-fler kastar buddyn en blick åt sidan, skiftar till kontots färg och säger
-"nytt mejl: avsändare, ämne" i åtta sekunder, utan ljud, och sedan är den
-tyst i minst tio minuter. Mail måste vara igång. Färgerna står i
-`kontofarger` i `server/buddy.json`, med kontonas namn som de heter i
-Mail.
+Mejlen läses ur Mail-appens samlade inkorg var femtonde sekund. En ny
+senaste meddelandeidentitet triggar @-scenen; första avläsningen är bara
+utgångsläge. Vid en skur av mejl visas det senaste mellan avläsningarna.
+Mail måste vara igång. Kontofärger väljs i `kontofarger` i `server/buddy.json`.
 
 ## SMS, Teams och kuvertet
 
@@ -270,8 +302,7 @@ python3 ~/Projects/office-buddy/server/buddylank.py --skicka "sag lunch om tio m
 
 ## Ljudet
 
-Buddyn är tyst av princip. Det som finns är ett litet plink när någon
-knackar eller petar, en stigande tvåklang, tre glada toner när något som
+Buddyn är tyst av princip. Det som finns är egna melodier för mejl, Claude, Codex och möten, tre glada toner när något som
 väntade blev gjort, och en liten trudelutt vid start och på morgonen. Mjuka
 klanger som ett litet klockspel, låg volym. Tystas helt med:
 ```bash
@@ -290,7 +321,7 @@ strömknappen inne: efter sex sekunder stänger strömkretsen av kortet.
 BSP:n saknar drivrutin för QMI8658, så `firmware/main/rorelse.c` skriver
 registren själv och läser accelerometern femtio gånger i sekunden. Ett
 lågpassfilter följer tyngdkraften. Det som avviker snabbt från den är en
-stöt: ett **knack**, som gör buddyn lite gladare och får den att titta upp.
+stöt: ett **knack**, som ger en tyst förvånad blick utan att kvittera.
 Om tyngdkraftens riktning i stället vandrar bort från viloläget och stannar
 där har någon **lyft** kortet: buddyn blir förvånad, vaknar om den sov och
 håller sig pigg en stund. Viloläget lärs in på nytt varje gång kortet legat
@@ -333,16 +364,13 @@ Andra program på Macen når kortet genom tjänstens brevlåda: posta rader
 till `http://127.0.0.1:8739/`, en per textrad. Claude Codes krokar gör det
 när Claude behöver dig: `claude vantar` när den ber om tillstånd eller
 ett svar, `claude klar` när den är färdig, `claude jobbar` när du svarat.
-Varje session skickar med sitt id och projektmappens namn, så buddyn
-skiljer sessionerna åt: en ny session som väntar annonseras alltid, även
-om en annan redan väntar, och raden säger vilket projekt det gäller,
-"Claude väntar: office-buddy och 1 till". Buddyn skiftar till orange i
-tre sekunder, tittar upp mot datorn och håller raden kvar tills du är
-tillbaka, med en liten blick åt datorns håll varannan minut. När du svarar i en session
-försvinner just den; det som återstår avgör vad glaset visar. Ett knack
-kvitterar allt. Sessioner som inte kör Claude Codes krokar, som Cowork
-och webben, syns inte. Krokarna läggs in med `python3 server/claude-krokar.py` och anropar
-`server/buddy-krok.sh`.
+Varje session skickar med sitt id och projektnamn. Frågan visas i orange
+tills sessionen fortsätter eller avslutas, med en egen kort melodisignal.
+En klar session firas en kort stund. Tryck och knack kvitterar inte.
+Notification filtreras till permission_prompt och elicitation_dialog;
+AskUserQuestion får egna före-/efterkrokar. Sessioner som inte kör dessa
+krokar eller publicerar VibePulse-status syns inte. Krokarna läggs in med
+`python3 server/claude-krokar.py` och anropar `server/buddy-krok.sh`.
 
 ```bash
 curl -s -X POST --data-binary "sag lunch om tio minuter" http://127.0.0.1:8739/
@@ -403,3 +431,11 @@ En till: **det som täcker ett öga får bara verka inom ögats egen ruta.** Loc
 och bågarna ritas i bakgrundsfärg, och utan klippning skulle en glad båge
 kunna bita i munnen. Klippningen sker genom att tillfälligt krympa lagrets
 `_clip_area`.
+
+### Kontroll av notiser
+
+Notisläsaren läser även färska WAL-ändringar, kontrollerar varannan sekund och försöker igen vid misslyckad leverans. Täta notiser samlas per typ. Teams, SMS och påminnelser köas bakom möten och agentfrågor; äldre köade scener förfaller efter 60 sekunder. Kalender, Mail och Påminnelser kontrolleras i bakgrunden så att en långsam källa inte stoppar USB-länken. Notisloggen visar mottagning och leverans utan meddelandetext.
+
+### Återgång efter notiser
+
+Mejl återgår efter 5 sekunder, SMS/Teams/backup efter 8, mötesförvarning efter 8 och mötesstart/timer/påminnelse efter 12. Agentloggor för klara svar släcks automatiskt efter 20 sekunder, eller tidigare när nytt arbete startar i samma agent, även med nytt turn-/sessions-ID. Klarsignalen skickas en gång och återspelas inte vid USB-återanslutning. Obesvarade frågor i andra uppgifter behålls. VibePulse-kontrollen synkroniserar arbetande agenter vid omstart så att gamla klarsignaler på kortet rensas. Köade vardagsnotiser förfaller efter en minut och spelas inte upp efter vila.

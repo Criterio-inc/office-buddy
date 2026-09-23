@@ -14,7 +14,7 @@ set(ROT ${CMAKE_CURRENT_SOURCE_DIR}/..)
 
 # LVGL hämtas av firmwarebygget. Tills det körts lånar vi Projektpulsens
 # kopia, som är exakt samma version (9.5.0) mot samma kort.
-set(LVGL_DIR ${ROT}/firmware/managed_components/lvgl__lvgl)
+set(LVGL_DIR "${ROT}/firmware/managed_components/lvgl__lvgl" CACHE PATH "LVGL sources")
 if(NOT EXISTS ${LVGL_DIR}/lvgl.h)
   set(LVGL_DIR ${ROT}/../projektpulsen/firmware/managed_components/lvgl__lvgl)
 endif()
@@ -40,8 +40,10 @@ target_link_libraries(lvgl PUBLIC SDL2::SDL2)
 
 add_executable(office-buddy-sim
   main.c
+  kontroll.c
   ${ROT}/delat/ansikte.c
   ${ROT}/delat/humor.c
+  ${ROT}/delat/signaler.c
   ${ROT}/delat/protokoll.c
   ${ROT}/delat/lv_font_replik.c
   ${ROT}/delat/lv_font_siffror.c
