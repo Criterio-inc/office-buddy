@@ -61,7 +61,11 @@ A tap never acknowledges or answers an agent.
 ## Event scenes and VibePulse
 
 Mail opens the eyes into **@ @**, then relaxes into a smile. Claude and Codex
-get their respective logo in both eyes and distinct chimes. Completion now holds the logo until new work starts in the same agent, the source disappears, or you explicitly silence it. Meetings get a
+get their own symbol in both eyes and distinct chimes: a star for Claude and
+`>_` for Codex. The real logos are trademarks and are not in the repo; put
+64×64 A8 alpha masks named `logga_claude` and `logga_codex` in
+`delat/agentloggor.h` (gitignored) and the build picks them up. SMS shows a
+speech bubble and Teams a T. Completion now holds the logo until new work starts in the same agent, the source disappears, or you explicitly silence it. Meetings get a
 clock, and completed agent turns get a short jump with stars. Timed scenes
 return automatically; the buddy is designed to be useful beyond arm's reach.
 

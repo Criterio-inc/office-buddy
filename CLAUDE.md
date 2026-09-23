@@ -53,6 +53,8 @@ The primary README is English. Keep it that way; do not translate the code.
   `office-buddy.local:8740`; both carry the same protocol lines.
 - The link service holds the USB port: `launchctl unload` it before
   `idf.py flash`, `load` it after.
+- `delat/agentloggor.h` (the Claude and Codex logos) is trademarked and
+  gitignored; `ansikte.c` falls back to vector symbols without it.
 - Personal settings live in `server/buddy.json`, which is gitignored. The
   repo only carries `buddy.example.json`. Never commit real accounts,
   paths or keys.

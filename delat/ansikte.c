@@ -22,7 +22,12 @@
 #include <string.h>
 
 #include "ansikte.h"
+/* Claudes och Codex loggor är varumärken och ligger inte i repot. Finns
+ * delat/agentloggor.h lokalt används de, annars egna vektorsymboler. */
+#if __has_include("agentloggor.h")
 #include "agentloggor.h"
+#define HAR_AGENTLOGGOR 1
+#endif
 
 /* ---- Färger ------------------------------------------------------------ */
 
@@ -458,6 +463,11 @@ static void symbol(lv_layer_t *l, int typ, float x, float y, float r, lv_color_t
 /* Samma logga i simulator och på kortet; ögonlocken ritas ovanpå. */
 static void rita_agentlogga(lv_layer_t *l, int typ, float x, float y, float r)
 {
+#ifndef HAR_AGENTLOGGOR
+    /* Utan loggorna: en stjärna för Claude, terminalens >_ för Codex. */
+    symbol(l, typ == 2 ? 5 : 3, x, y, r, FARG_PUPILL);
+    return;
+#else
     lv_draw_image_dsc_t d;
     lv_draw_image_dsc_init(&d);
     d.src = typ == 2 ? &logga_claude : &logga_codex;
@@ -468,6 +478,7 @@ static void rita_agentlogga(lv_layer_t *l, int typ, float x, float y, float r)
     a.x1 = (int32_t)lroundf(x) - 32; a.y1 = (int32_t)lroundf(y) - 32;
     a.x2 = a.x1 + 63; a.y2 = a.y1 + 63;
     lv_draw_image(l, &d, &a);
+#endif
 }
 
 static float pup_x, pup_y;   /* pupillernas riktning, -1..1, sätts i rita() */

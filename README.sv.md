@@ -146,8 +146,12 @@ tillbaka när som helst.
 ## Händelser som syns på håll
 
 Mejl ger stora **@ @-ögon**, ett kuvert och en egen kort trudelutt. Claude
-eller Codex som behöver svar får sin respektive logga i båda ögonen och en
-egen tvåton. Möten får en klocksymbol. När en agent blir klar visas loggan i 20 sekunder med ljusa ögon och sedan återgår Buddy automatiskt. Bara verkliga frågor har kvar orange agentögon. Flera väntande uppgifter växlar var femte sekund.
+eller Codex som behöver svar får en egen symbol i båda ögonen och en egen
+tvåton: en stjärna för Claude och `>_` för Codex. De riktiga loggorna är
+varumärken och ligger inte i repot. Lägg 64×64 A8-alfamasker med namnen
+`logga_claude` och `logga_codex` i `delat/agentloggor.h` (gitignorerad), så
+använder bygget dem. Sms visar en pratbubbla och Teams ett T. Möten och
+påminnelser får en klocksymbol. När en agent blir klar visas loggan i 20 sekunder med ljusa ögon och sedan återgår Buddy automatiskt. Bara verkliga frågor har kvar orange agentögon. Flera väntande uppgifter växlar var femte sekund.
 
 Ingen klapp behövs. En rörelsestöt ger bara en förvånad blick. Agentfrågor
 försvinner när källan rapporterar att de upphört, eller med `tysta` från

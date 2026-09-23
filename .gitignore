@@ -26,5 +26,8 @@ server/buddy.json
 server/notiser
 server/Notiser.app
 
+# Claudes och Codex loggor är varumärken och ligger bara lokalt
+delat/agentloggor.h
+
 # macOS
 .DS_Store
